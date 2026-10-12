@@ -2,6 +2,11 @@ import { defineMessages } from '../define';
 
 export default defineMessages({
   cs: {
+    chatsTab: "Chaty",
+    requestsTab: "Žádosti",
+    backToChats: "Zpět na chaty",
+    noRequests: "Žádné čekající žádosti ani pozvánky.",
+
     searchChat: 'Hledat chat',
     noRoomSelected: 'Vyber chat vlevo, nebo stiskni {shortcut}.',
     // Quick switcher
@@ -29,6 +34,7 @@ export default defineMessages({
     sectionDms: 'Přímé zprávy',
     sectionGroups: 'Skupiny',
     sectionLowPriority: 'Nízká priorita',
+    sectionLater: 'Později',
     // Room row + context menu
     invite: 'Pozvánka',
     markRead: 'Označit jako přečtené',
@@ -44,6 +50,19 @@ export default defineMessages({
     declineInvite: 'Odmítnout pozvánku',
     leaveChat: 'Opustit chat',
     leaveFailed: 'Chat se nepodařilo opustit.',
+    // Space menu (rail)
+    markAllRead: 'Označit vše jako přečtené',
+    markAllFailed: 'Některé chaty se nepodařilo označit.',
+    removeSpace: 'Smazat space',
+    removeSpaceTitle: 'Smazat {name}?',
+    removeSpaceDescription: {
+      one: 'Opustíš {count} chat. Bridge ho po novém přihlášení účtu vytvoří znovu.',
+      few: 'Opustíš {count} chaty. Bridge je po novém přihlášení účtu vytvoří znovu.',
+      other: 'Opustíš {count} chatů. Bridge je po novém přihlášení účtu vytvoří znovu.',
+    },
+    removingSpace: 'Opouštím chaty… {done}/{total}',
+    spaceRemoved: 'Space {name} smazán.',
+    removeSpaceFailed: 'Nepodařilo se opustit všechny chaty. Zkus to znovu.',
     // User menu
     pauseNotifications: 'Pozastavit notifikace',
     pausedUntil: 'Pozastaveno do {time}',
@@ -56,6 +75,11 @@ export default defineMessages({
     resizePanel: 'Změnit šířku panelu',
   },
   sk: {
+    chatsTab: "Chaty",
+    requestsTab: "Žiadosti",
+    backToChats: "Späť na chaty",
+    noRequests: "Žiadne čakajúce žiadosti ani pozvánky.",
+
     searchChat: 'Hľadať chat',
     noRoomSelected: 'Vyber chat vľavo alebo stlač {shortcut}.',
     switcherTitle: 'Prejsť na chat',
@@ -79,6 +103,7 @@ export default defineMessages({
     sectionDms: 'Priame správy',
     sectionGroups: 'Skupiny',
     sectionLowPriority: 'Nízka priorita',
+    sectionLater: 'Neskôr',
     invite: 'Pozvánka',
     markRead: 'Označiť ako prečítané',
     markUnread: 'Označiť ako neprečítané',
@@ -93,6 +118,18 @@ export default defineMessages({
     declineInvite: 'Odmietnuť pozvánku',
     leaveChat: 'Opustiť chat',
     leaveFailed: 'Chat sa nepodarilo opustiť.',
+    markAllRead: 'Označiť všetko ako prečítané',
+    markAllFailed: 'Niektoré chaty sa nepodarilo označiť.',
+    removeSpace: 'Odstrániť space',
+    removeSpaceTitle: 'Odstrániť {name}?',
+    removeSpaceDescription: {
+      one: 'Opustíš {count} chat. Bridge ho po novom prihlásení účtu vytvorí znova.',
+      few: 'Opustíš {count} chaty. Bridge ich po novom prihlásení účtu vytvorí znova.',
+      other: 'Opustíš {count} chatov. Bridge ich po novom prihlásení účtu vytvorí znova.',
+    },
+    removingSpace: 'Opúšťam chaty… {done}/{total}',
+    spaceRemoved: 'Space {name} odstránený.',
+    removeSpaceFailed: 'Nepodarilo sa opustiť všetky chaty. Skús to znova.',
     pauseNotifications: 'Pozastaviť upozornenia',
     pausedUntil: 'Pozastavené do {time}',
     resumeNotifications: 'Obnoviť upozornenia',
@@ -104,6 +141,11 @@ export default defineMessages({
     resizePanel: 'Zmeniť šírku panela',
   },
   en: {
+    chatsTab: "Chats",
+    requestsTab: "Requests",
+    backToChats: "Back to chats",
+    noRequests: "No pending requests or invitations.",
+
     searchChat: 'Search chats',
     noRoomSelected: 'Pick a chat on the left, or press {shortcut}.',
     switcherTitle: 'Go to chat',
@@ -127,6 +169,7 @@ export default defineMessages({
     sectionDms: 'Direct messages',
     sectionGroups: 'Groups',
     sectionLowPriority: 'Low priority',
+    sectionLater: 'Later',
     invite: 'Invite',
     markRead: 'Mark as read',
     markUnread: 'Mark as unread',
@@ -141,6 +184,17 @@ export default defineMessages({
     declineInvite: 'Decline invite',
     leaveChat: 'Leave chat',
     leaveFailed: 'Could not leave the chat.',
+    markAllRead: 'Mark all as read',
+    markAllFailed: 'Some chats could not be marked.',
+    removeSpace: 'Remove space',
+    removeSpaceTitle: 'Remove {name}?',
+    removeSpaceDescription: {
+      one: 'You will leave {count} chat. The bridge creates it again when you log the account back in.',
+      other: 'You will leave {count} chats. The bridge creates them again when you log the account back in.',
+    },
+    removingSpace: 'Leaving chats… {done}/{total}',
+    spaceRemoved: '{name} removed.',
+    removeSpaceFailed: 'Could not leave all chats. Try again.',
     pauseNotifications: 'Pause notifications',
     pausedUntil: 'Paused until {time}',
     resumeNotifications: 'Resume notifications',

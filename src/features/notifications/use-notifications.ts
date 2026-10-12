@@ -10,7 +10,9 @@ import {
 } from 'matrix-js-sdk';
 import { useEffect } from 'react';
 import { t } from '@/i18n';
-import { isWindowFocused, showNotification } from '@/lib/native';
+import { isWindowFocused, requestNotificationPermission, showNotification } from '@/lib/native';
+import { isBackfill } from '@/matrix/backfill';
+import { isOwnGhost } from '@/matrix/bridge';
 import { useMatrixClient } from '@/matrix/context';
 import { describeEvent, isMessageEvent } from '@/matrix/event-text';
 import { getNotifyLevel } from '@/matrix/push-rules';
@@ -50,6 +52,8 @@ function evaluate(client: MatrixClient, event: MatrixEvent, room: Room): Candida
   if (!isMessageEvent(event)) return null;
   if (event.isRelation('m.replace')) return null;
   if (event.getTs() < Date.now() - MAX_AGE_MS) return null;
+  // History copied in by a bridge, even when its timestamps are recent.
+  if (isBackfill(event, room)) return null;
   if (room.getMyMembership() !== KnownMembership.Join) return null;
 
   const settings = useSettings.getState().notifications;
@@ -88,6 +92,8 @@ function evaluate(client: MatrixClient, event: MatrixEvent, room: Room): Candida
   }
 
   const senderId = event.getSender() ?? '';
+  // Sent from the user's own phone through the bridge.
+  if (isOwnGhost(senderId, summary?.bridge?.receiver)) return null;
   const senderName = room.getMember(senderId)?.name || event.sender?.name || senderId;
   const roomName = summary?.name ?? room.name;
   let title = isDm ? senderName : `${senderName} · ${roomName}`;
@@ -113,6 +119,12 @@ interface RoomThrottle {
 /** Desktop notifications for new messages. Mount once inside the Matrix context. */
 export function useDesktopNotifications(): void {
   const client = useMatrixClient();
+  const enabled = useSettings((s) => s.notifications.enabled);
+
+  // Ask up front so the macOS prompt doesn't wait for the first message.
+  useEffect(() => {
+    if (enabled) void requestNotificationPermission();
+  }, [enabled]);
 
   useEffect(() => {
     const handled = new Set<string>();

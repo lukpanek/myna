@@ -1,5 +1,6 @@
 mod cookie_login;
 mod media;
+mod notifications;
 mod window;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -36,6 +37,8 @@ pub fn run() {
       media::set_media_session,
       media::clear_media_session,
       cookie_login::open_cookie_login,
+      notifications::notification_permission,
+      notifications::native_notify,
     ])
     .on_window_event(window::on_window_event)
     .setup(|app| {

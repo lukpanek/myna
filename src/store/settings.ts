@@ -28,12 +28,20 @@ export interface Settings {
   /** Room list: compact rows (Slack) or two-line rows with message preview. */
   density: ListDensity;
   fontSize: number;
+  interfaceScale: number;
+  groupRooms: boolean;
+  showRoomIcons: boolean;
+  highContrast: boolean;
+  accessibleNames: boolean;
+  reduceMotion: boolean;
   showSystemEvents: boolean;
   showReadReceipts: boolean;
   showMediaPreviews: boolean;
   /** Shift+Enter sends instead of Enter. */
   sendWithShift: boolean;
   recentEmoji: string[];
+  /** Old history a bridge copies into a new chat is marked read (private receipt). */
+  markBridgeHistoryRead: boolean;
 
   notifications: {
     enabled: boolean;
@@ -45,6 +53,8 @@ export interface Settings {
   };
 
   networkIcons: Record<string, NetworkIconChoice>;
+  /** User's own names for networks; no entry = the name the bridge announces. */
+  networkNames: Record<string, string>;
 
   bridges: {
     /** Provisioning API URLs added by hand, in addition to .well-known discovery. */
@@ -60,6 +70,7 @@ interface SettingsActions {
   addBridgeUrl: (url: string) => void;
   removeBridgeUrl: (url: string) => void;
   setNetworkIcon: (networkId: string, choice: NetworkIconChoice | null) => void;
+  setNetworkName: (networkId: string, name: string | null) => void;
 }
 
 export const DEFAULT_RECENT_EMOJI = ['👍', '❤️', '😂', '🙏', '👀', '🎉'];
@@ -71,11 +82,18 @@ export const useSettings = create<Settings & SettingsActions>()(
       theme: 'system',
       density: 'comfortable',
       fontSize: 15,
+      interfaceScale: 100,
+      groupRooms: true,
+      showRoomIcons: true,
+      highContrast: false,
+      accessibleNames: false,
+      reduceMotion: false,
       showSystemEvents: false,
       showReadReceipts: true,
       showMediaPreviews: true,
       sendWithShift: false,
       recentEmoji: DEFAULT_RECENT_EMOJI,
+      markBridgeHistoryRead: true,
       notifications: {
         enabled: true,
         sound: true,
@@ -84,6 +102,7 @@ export const useSettings = create<Settings & SettingsActions>()(
         networks: {},
       },
       networkIcons: {},
+      networkNames: {},
       bridges: { manualUrls: [] },
 
       set: (patch) => set(patch),
@@ -112,6 +131,13 @@ export const useSettings = create<Settings & SettingsActions>()(
           if (choice) networkIcons[networkId] = choice;
           else delete networkIcons[networkId];
           return { networkIcons };
+        }),
+      setNetworkName: (networkId, name) =>
+        set((s) => {
+          const networkNames = { ...s.networkNames };
+          if (name) networkNames[networkId] = name;
+          else delete networkNames[networkId];
+          return { networkNames };
         }),
     }),
     { name: 'myna.settings', version: 1 },

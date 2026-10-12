@@ -1,12 +1,24 @@
 import { type Editor, EditorContent, type EditorOptions, useEditor } from '@tiptap/react';
 import type { Room } from 'matrix-js-sdk';
-import { AtSign, CaseSensitive, Mic, Pencil, Plus, Reply, SendHorizontal, Smile, X } from 'lucide-react';
+import { AtSign, CaseSensitive, ChevronDown, Clock, Mic, Pencil, Plus, Reply, SendHorizontal, Smile, X } from 'lucide-react';
 import { type ComponentProps, type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { toast } from 'sonner';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { EmojiPicker } from '@/features/emoji/emoji-picker';
+import { ScheduledBar } from '@/features/later/scheduled-bar';
+import { type ScheduledMessage, scheduleMessage } from '@/features/later/scheduled';
+import { formatWhen, whenPresets } from '@/features/later/when';
+import { WhenDialog } from '@/features/later/when-dialog';
 import { senderName } from '@/features/room/timeline-utils';
 import { t } from '@/i18n';
 import { tn } from '@/i18n/rich';
@@ -34,7 +46,7 @@ import {
   textContent,
   voiceContent,
 } from './send';
-import { serializeDoc } from './serialize';
+import { matrixHtmlToEditor, plainToDoc, serializeDoc } from './serialize';
 import { SuggestionPopup, useSuggestionPopup } from './suggestion-popup';
 import { buildFileContent } from './upload';
 import { type VoiceClip, VoiceRecorder } from './voice-recorder';
@@ -62,6 +74,7 @@ export function Composer({ room, threadId }: { room: Room; threadId?: string }) 
   const [voiceProgress, setVoiceProgress] = useState<number | null>(null);
   const [linkDraft, setLinkDraft] = useState<LinkDraft | null>(null);
   const [emojiOpen, setEmojiOpen] = useState(false);
+  const [scheduleOpen, setScheduleOpen] = useState(false);
   const [empty, setEmpty] = useState(true);
   const suggestion = useSuggestionPopup();
   const fileInput = useRef<HTMLInputElement>(null);
@@ -197,6 +210,40 @@ export function Composer({ room, threadId }: { room: Room; threadId?: string }) 
       editor.setEditable(true);
       editor.commands.focus('end');
     }
+  };
+
+  /** Text only: attachments would have to be uploaded and kept until the send time. */
+  const scheduleSend = (at: number) => {
+    const editor = editorRef.current;
+    if (!editor) return;
+    const store = useComposerStore.getState();
+    const { files, replyToEventId, editEventId } = store.get(key);
+    if (editEventId || files.length > 0) return;
+    const { doc, msgtype } = applyCommand(editor.state);
+    const msg = serializeDoc(doc);
+    if (!msg.body.trim()) return;
+    const replyTo = replyToEventId ? findEvent(room, threadId, replyToEventId) : undefined;
+    const content = textContent(msg, msgtype);
+    content['m.mentions'] = mentionsFor(msg, replyTo, client.getUserId());
+    scheduleMessage({ userId: client.getSafeUserId(), roomId: room.roomId, threadId, replyTo: replyToEventId, content, at });
+    setTyping(false);
+    editor.commands.clearContent(true);
+    if (replyToEventId) store.setReplyTo(key, null);
+    toast.success(t('later.scheduledFor', { when: formatWhen(at) }));
+  };
+
+  const editScheduled = (message: ScheduledMessage): boolean => {
+    const editor = editorRef.current;
+    const store = useComposerStore.getState();
+    if (!editor || !editor.isEmpty || store.get(key).editEventId) {
+      toast.error(t('later.composerBusy'));
+      return false;
+    }
+    const { body, formatted_body: html } = message.content;
+    editor.commands.setContent(typeof html === 'string' ? matrixHtmlToEditor(html) : plainToDoc(String(body ?? '')));
+    if (message.replyTo) store.setReplyTo(key, message.replyTo);
+    editor.commands.focus('end');
+    return true;
   };
 
   const sendVoice = async (clip: VoiceClip) => {
@@ -363,6 +410,7 @@ export function Composer({ room, threadId }: { room: Room; threadId?: string }) 
           entry.editEventId && 'border-amber-500/60 focus-within:border-amber-500',
         )}
       >
+        <ScheduledBar room={room} threadId={threadId} onEdit={editScheduled} />
         {entry.editEventId ? (
           <ContextBanner
             icon={<Pencil className="size-3.5" />}
@@ -461,6 +509,40 @@ export function Composer({ room, threadId }: { room: Room; threadId?: string }) 
                     {modKey}+Enter)
                   </TooltipContent>
                 </Tooltip>
+                {!entry.editEventId && entry.files.length === 0 && (
+                  <DropdownMenu>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <DropdownMenuTrigger asChild>
+                          <button
+                            type="button"
+                            aria-label={t('later.sendLater')}
+                            disabled={!canSend}
+                            onMouseDown={(e) => e.preventDefault()}
+                            className="flex h-7 w-5 items-center justify-center rounded-md text-muted-foreground transition-colors enabled:hover:bg-accent enabled:hover:text-foreground disabled:opacity-50"
+                          >
+                            <ChevronDown className="size-3.5" />
+                          </button>
+                        </DropdownMenuTrigger>
+                      </TooltipTrigger>
+                      <TooltipContent side="top">{t('later.sendLater')}</TooltipContent>
+                    </Tooltip>
+                    <DropdownMenuContent side="top" align="end" className="w-60" onCloseAutoFocus={(e) => e.preventDefault()}>
+                      <DropdownMenuLabel>{t('later.sendLater')}</DropdownMenuLabel>
+                      {whenPresets().map((p) => (
+                        <DropdownMenuItem key={p.key} onSelect={() => scheduleSend(p.at)}>
+                          {p.label}
+                          <span className="ml-auto text-xs text-muted-foreground tabular-nums">{formatWhen(p.at)}</span>
+                        </DropdownMenuItem>
+                      ))}
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem onSelect={() => setScheduleOpen(true)}>
+                        <Clock />
+                        {t('later.customTime')}…
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                )}
               </div>
             </div>
           </>
@@ -480,6 +562,15 @@ export function Composer({ room, threadId }: { room: Room; threadId?: string }) 
       />
 
       <SuggestionPopup view={suggestion.view} active={suggestion.active} onHover={suggestion.setActive} />
+
+      <WhenDialog
+        open={scheduleOpen}
+        customOnly
+        title={t('later.sendLater')}
+        description={t('later.sendLaterDescription')}
+        onPick={scheduleSend}
+        onOpenChange={setScheduleOpen}
+      />
 
       <Dialog open={!!linkDraft} onOpenChange={(open) => !open && setLinkDraft(null)}>
         <DialogContent className="sm:max-w-md" onCloseAutoFocus={(e) => e.preventDefault()}>

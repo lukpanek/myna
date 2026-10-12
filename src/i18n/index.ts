@@ -10,6 +10,7 @@ import composer from './messages/composer';
 import crypto from './messages/crypto';
 import details from './messages/details';
 import emoji from './messages/emoji';
+import later from './messages/later';
 import matrix from './messages/matrix';
 import newChat from './messages/newChat';
 import notifications from './messages/notifications';
@@ -37,6 +38,7 @@ const catalogs = {
   details,
   bridges,
   newChat,
+  later,
 };
 
 type Catalogs = typeof catalogs;

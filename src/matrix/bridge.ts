@@ -1,4 +1,5 @@
 import type { MatrixEvent, Room } from 'matrix-js-sdk';
+import { useSettings } from '@/store/settings';
 
 /** Section of an MSC2346 `m.bridge` event (protocol / network / channel). */
 interface BridgeSection {
@@ -23,6 +24,8 @@ interface BridgeContent {
 export interface BridgeInfo {
   /** Stable network key, e.g. `whatsapp`, `signal`, `telegram`. */
   networkId: string;
+  /** Network key as this room announces it; differs from `networkId` when merged by bridge bot. */
+  protocolId: string;
   networkName: string;
   networkAvatar?: string;
   bridgeBot?: string;
@@ -50,15 +53,38 @@ function firstBridgeEvent(room: Room): MatrixEvent | undefined {
   return undefined;
 }
 
+/** Names announced by the bridges, before the user's renames; icon detection relies on them. */
+const announcedNames = new Map<string, string>();
+
+export function announcedNetworkName(networkId: string): string | undefined {
+  return announcedNames.get(networkId);
+}
+
+/**
+ * One bridge can announce several network keys over time (mautrix-meta: older
+ * portals `facebook`, newer `messenger`). Keys of the same bridge bot are merged
+ * into one network: bridge bot → network key every room of that bot reports.
+ */
+let networkByBot = new Map<string, string>();
+
+export function setNetworkAliases(aliases: Map<string, string>): void {
+  networkByBot = aliases;
+}
+
 export function getBridgeInfo(room: Room): BridgeInfo | null {
   const event = firstBridgeEvent(room);
   if (!event) return null;
   const c = event.getContent<BridgeContent>();
-  const networkId = (c.protocol?.id || event.getStateKey() || c.bridgebot || 'bridge').toLowerCase();
+  const protocolId = (c.protocol?.id || event.getStateKey() || c.bridgebot || 'bridge').toLowerCase();
+  const networkId = (c.bridgebot && networkByBot.get(c.bridgebot)) || protocolId;
   const roomType = c['com.beeper.room_type.v2'] || c['com.beeper.room_type'] || undefined;
+  let announced = c.protocol?.displayname || prettyNetworkName(protocolId);
+  if (networkId === protocolId) announcedNames.set(networkId, announced);
+  else announced = announcedNames.get(networkId) ?? announced;
   return {
     networkId,
-    networkName: c.protocol?.displayname || prettyNetworkName(networkId),
+    protocolId,
+    networkName: useSettings.getState().networkNames[networkId] || announced,
     networkAvatar: c.protocol?.avatar_url || undefined,
     bridgeBot: c.bridgebot,
     receiver: c.channel?.['fi.mau.receiver'] || undefined,
@@ -68,6 +94,21 @@ export function getBridgeInfo(room: Room): BridgeInfo | null {
     roomType,
     messageRequest: !!c.channel?.['com.beeper.message_request'],
   };
+}
+
+/** Login ID of the account a portal belongs to, without building the whole `BridgeInfo`. */
+export function bridgeReceiver(room: Room): string | undefined {
+  return firstBridgeEvent(room)?.getContent<BridgeContent>().channel?.['fi.mau.receiver'] || undefined;
+}
+
+/**
+ * Ghost of the logged-in remote account itself (`@instagram_<login id>`): messages
+ * sent from the phone without double puppeting, often named "Unknown user".
+ */
+export function isOwnGhost(userId: string | undefined, receiver: string | undefined): boolean {
+  if (!userId || !receiver) return false;
+  const localpart = userId.slice(1, userId.indexOf(':')).toLowerCase();
+  return localpart.endsWith(`_${receiver.toLowerCase()}`);
 }
 
 const KNOWN_NAMES: Record<string, string> = {

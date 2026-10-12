@@ -1,0 +1,4 @@
+# `pnpm tauri dev` runs the app through cargo; the runner wraps it in a bundle
+# so macOS notifications work (see scripts/dev-runner.sh).
+[target.'cfg(target_os = "macos")']
+runner = "scripts/dev-runner.sh"

@@ -11,9 +11,12 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { t } from '@/i18n';
 import { PLATFORMS, detectPlatform } from '@/lib/platform-icons';
 import { cn } from '@/lib/utils';
+import { announcedNetworkName } from '@/matrix/bridge';
 import { type NetworkIconChoice, useSettings } from '@/store/settings';
 
 const CUSTOM_SIZE = 128;
@@ -64,7 +67,7 @@ async function imageToDataUrl(file: File): Promise<string> {
   }
 }
 
-/** Picks the icon of a bridged network: automatic, bridge avatar, a platform logo or an uploaded image. */
+/** Edits how a bridged network looks: its name and icon (automatic, bridge avatar, a platform logo or an uploaded image). */
 export function NetworkIconDialog({
   target,
   onOpenChange,
@@ -84,10 +87,14 @@ export function NetworkIconDialog({
 function IconPicker({ target, onDone }: { target: NetworkIconTarget; onDone: () => void }) {
   const saved = useSettings((s) => s.networkIcons[target.networkId]);
   const setNetworkIcon = useSettings((s) => s.setNetworkIcon);
+  const setNetworkName = useSettings((s) => s.setNetworkName);
+  const announced = announcedNetworkName(target.networkId) ?? target.name;
+  const savedName = useSettings((s) => s.networkNames[target.networkId]);
+  const [name, setName] = useState(savedName ?? target.name);
   const [selection, setSelection] = useState<Selection>(saved ?? 'auto');
   const [custom, setCustom] = useState<string | null>(saved?.kind === 'custom' ? saved.dataUrl : null);
   const fileInput = useRef<HTMLInputElement>(null);
-  const detected = detectPlatform(target.networkId, target.name);
+  const detected = detectPlatform(target.networkId, announced);
 
   const upload = async (file: File) => {
     try {
@@ -101,6 +108,8 @@ function IconPicker({ target, onDone }: { target: NetworkIconTarget; onDone: () 
 
   const save = () => {
     setNetworkIcon(target.networkId, selection === 'auto' ? null : selection);
+    const trimmed = name.trim();
+    setNetworkName(target.networkId, trimmed && trimmed !== announced ? trimmed : null);
     onDone();
   };
 
@@ -109,9 +118,21 @@ function IconPicker({ target, onDone }: { target: NetworkIconTarget; onDone: () 
   return (
     <>
       <DialogHeader>
-        <DialogTitle>{t('bridges.iconTitle', { name: target.name })}</DialogTitle>
-        <DialogDescription>{t('bridges.iconDescription')}</DialogDescription>
+        <DialogTitle>{t('bridges.editTitle', { name: savedName ?? target.name })}</DialogTitle>
+        <DialogDescription>{t('bridges.editDescription')}</DialogDescription>
       </DialogHeader>
+
+      <div className="grid gap-2">
+        <Label htmlFor="network-name">{t('bridges.nameLabel')}</Label>
+        <Input
+          id="network-name"
+          value={name}
+          placeholder={announced}
+          onChange={(e) => setName(e.target.value)}
+          onKeyDown={(e) => e.key === 'Enter' && save()}
+        />
+        <p className="text-xs text-muted-foreground">{t('bridges.nameHint', { name: announced })}</p>
+      </div>
 
       <div className="flex justify-center py-2">
         <NetworkIcon {...iconProps} size={72} choice={selection} className="rounded-2xl shadow-sm" />

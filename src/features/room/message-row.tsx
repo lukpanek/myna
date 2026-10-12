@@ -14,7 +14,7 @@ import { MessageContent } from './message-content';
 import { Reactions } from './reactions';
 import { ReplyQuote } from './reply-quote';
 import { useTimelineContext } from './timeline-context';
-import { describeSystemEvent, isPending, memberName, senderName } from './timeline-utils';
+import { describeSystemEvent, displaySender, isPending, memberName, senderName } from './timeline-utils';
 
 dayjs.extend(relativeTime);
 
@@ -64,7 +64,10 @@ function ChatRow({ room, event, continuation, receipts, highlighted, hideThreadS
   const { threadId, jumpTo } = useTimelineContext();
   const [hovered, setHovered] = useState(false);
   const [toolbarOpen, setToolbarOpen] = useState(false);
-  const sender = event.getSender() ?? '';
+  // A jump highlight fades out slowly; hover only briefly.
+  const [slowFade, setSlowFade] = useState(false);
+  if (highlighted && !slowFade) setSlowFade(true);
+  const sender = displaySender(room, event.getSender());
   const name = senderName(room, event);
   const ts = event.getTs();
   const pending = isPending(event);
@@ -78,10 +81,14 @@ function ChatRow({ room, event, continuation, receipts, highlighted, hideThreadS
   return (
     <div
       data-event-id={event.getId()}
-      onMouseEnter={() => setHovered(true)}
+      onMouseEnter={() => {
+        setHovered(true);
+        setSlowFade(false);
+      }}
       onMouseLeave={() => setHovered(false)}
       className={cn(
-        'group/row relative flex gap-2 px-5 py-0.5 transition-colors duration-1000',
+        'group/row relative flex gap-2 px-5 py-0.5 transition-colors',
+        slowFade ? 'duration-1000' : 'duration-150',
         // content-visibility clips overflow, which would cut off the hover toolbar.
         !showToolbar && 'cv-auto',
         !continuation && 'mt-2 pt-1',
@@ -100,7 +107,10 @@ function ChatRow({ room, event, continuation, receipts, highlighted, hideThreadS
             className="mt-0.5 block cursor-pointer rounded-full outline-none focus-visible:ring-2 focus-visible:ring-ring"
           >
             <MxAvatar
-              mxc={event.sender?.getMxcAvatarUrl() ?? room.getMember(sender)?.getMxcAvatarUrl()}
+              mxc={
+                (sender === event.getSender() ? event.sender?.getMxcAvatarUrl() : undefined) ??
+                room.getMember(sender)?.getMxcAvatarUrl()
+              }
               name={name}
               seed={sender}
               size={36}
@@ -114,8 +124,8 @@ function ChatRow({ room, event, continuation, receipts, highlighted, hideThreadS
             <button
               type="button"
               onClick={() => openUserProfile(sender)}
-              className="cursor-pointer truncate font-semibold outline-none hover:underline focus-visible:underline"
-              title={sender}
+              className="mx-sender-name cursor-pointer truncate font-semibold outline-none hover:underline focus-visible:underline"
+              title={event.getSender()}
             >
               {name}
             </button>

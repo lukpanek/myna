@@ -18,7 +18,7 @@ const NOTIFICATION_CLICK_WINDOW = 10_000;
 const BADGE_THROTTLE = 500;
 
 let focused = typeof document === 'undefined' ? true : document.hasFocus();
-let lastNotification: { roomId: string; at: number } | null = null;
+let lastNotification: { roomId: string; eventId?: string; at: number } | null = null;
 let mediaSessionClient: MatrixClient | null = null;
 
 export function isWindowFocused(): boolean {
@@ -38,7 +38,7 @@ function setMediaSession(client: MatrixClient) {
 function onFocusGained() {
   const n = lastNotification;
   lastNotification = null;
-  if (n && Date.now() - n.at < NOTIFICATION_CLICK_WINDOW) useUi.getState().openRoom(n.roomId);
+  if (n && Date.now() - n.at < NOTIFICATION_CLICK_WINDOW) useUi.getState().openRoom(n.roomId, { eventId: n.eventId });
 }
 
 function externalHref(target: EventTarget | null): string | null {
@@ -166,6 +166,9 @@ export function requestNotificationPermission(): Promise<boolean> {
   if (!permission) {
     permission = (async () => {
       if (isTauri) {
+        // macOS .app: UNUserNotificationCenter (shows the system prompt). null = plugin path.
+        const native = await invoke<boolean | null>('notification_permission');
+        if (native !== null) return native;
         const { isPermissionGranted, requestPermission } = await import('@tauri-apps/plugin-notification');
         if (await isPermissionGranted()) return true;
         return (await requestPermission()) === 'granted';
@@ -193,19 +196,29 @@ export async function showNotification(o: {
   title: string;
   body: string;
   roomId: string;
+  /** Event to jump to when the notification is clicked. */
+  eventId?: string;
   sound: boolean;
 }): Promise<void> {
   if (!(await requestNotificationPermission())) return;
   if (isTauri) {
-    const { sendNotification } = await import('@tauri-apps/plugin-notification');
-    sendNotification({ title: o.title, body: o.body, sound: o.sound ? soundName() : undefined });
-    lastNotification = isWindowFocused() ? null : { roomId: o.roomId, at: Date.now() };
+    const sent = await invoke<boolean>('native_notify', {
+      title: o.title,
+      body: o.body,
+      sound: o.sound,
+      group: o.roomId,
+    }).catch(() => false);
+    if (!sent) {
+      const { sendNotification } = await import('@tauri-apps/plugin-notification');
+      sendNotification({ title: o.title, body: o.body, sound: o.sound ? soundName() : undefined });
+    }
+    lastNotification = isWindowFocused() ? null : { roomId: o.roomId, eventId: o.eventId, at: Date.now() };
     return;
   }
   const n = new Notification(o.title, { body: o.body, silent: !o.sound, tag: o.roomId });
   n.onclick = () => {
     window.focus();
-    useUi.getState().openRoom(o.roomId);
+    useUi.getState().openRoom(o.roomId, { eventId: o.eventId });
     n.close();
   };
 }

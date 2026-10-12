@@ -29,6 +29,7 @@ function keepPanelAcrossRooms(panel: RightPanel): RightPanel {
 
 /** Full-page screens that replace the room view. */
 export type Page = 'chat' | 'bridges';
+export type SidebarTab = 'chats' | 'requests';
 
 /** Opens a member's profile in the right panel; the back arrow returns to details or the thread. */
 export function openUserProfile(userId: string) {
@@ -57,6 +58,8 @@ interface UiState {
   /** Account filter inside a network view (bridge login id), null = all accounts. */
   accountByNetwork: Record<string, string | null>;
   unreadOnly: boolean;
+  sidebarTab: SidebarTab;
+  setSidebarTab: (tab: SidebarTab) => void;
   collapsedSections: Record<string, boolean>;
   rightPanel: RightPanel;
   settingsOpen: boolean;
@@ -91,6 +94,8 @@ export const useUi = create<UiState>()(
       lastRoomByView: {},
       accountByNetwork: {},
       unreadOnly: false,
+      sidebarTab: 'chats',
+      setSidebarTab: (sidebarTab) => set({ sidebarTab }),
       collapsedSections: {},
       rightPanel: null,
       settingsOpen: false,
@@ -142,6 +147,7 @@ export const useUi = create<UiState>()(
         lastRoomByView: s.lastRoomByView,
         accountByNetwork: s.accountByNetwork,
         unreadOnly: s.unreadOnly,
+        sidebarTab: s.sidebarTab,
         collapsedSections: s.collapsedSections,
         sidebarWidth: s.sidebarWidth,
         rightPanelWidth: s.rightPanelWidth,

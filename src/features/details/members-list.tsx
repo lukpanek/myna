@@ -5,6 +5,7 @@ import { memo, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { MxAvatar } from '@/components/mx-avatar';
 import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
+import { memberName } from '@/features/room/timeline-utils';
 import { getLocale, t } from '@/i18n';
 import { useRerenderOn } from '@/matrix/hooks';
 import { openUserProfile } from '@/store/ui';
@@ -74,19 +75,21 @@ export function MembersList({
       ) : members.length === 0 ? (
         <p className="px-4 py-6 text-center text-[13px] text-muted-foreground">{t('details.noMembersMatch')}</p>
       ) : members.length > VIRTUALIZE_FROM ? (
-        <VirtualMembers members={members} bridgeBot={bridgeBot} scrollEl={scrollEl} />
+        <VirtualMembers room={room} members={members} bridgeBot={bridgeBot} scrollEl={scrollEl} />
       ) : (
-        members.map((m) => <MemberRow key={m.userId} {...rowProps(m, bridgeBot)} />)
+        members.map((m) => <MemberRow key={m.userId} {...rowProps(room, m, bridgeBot)} />)
       )}
     </div>
   );
 }
 
 function VirtualMembers({
+  room,
   members,
   bridgeBot,
   scrollEl,
 }: {
+  room: Room;
   members: RoomMember[];
   bridgeBot?: string;
   scrollEl: HTMLElement | null;
@@ -116,7 +119,7 @@ function VirtualMembers({
             className="absolute top-0 left-0 w-full"
             style={{ height: item.size, transform: `translateY(${item.start - margin}px)` }}
           >
-            <MemberRow {...rowProps(m, bridgeBot)} />
+            <MemberRow {...rowProps(room, m, bridgeBot)} />
           </div>
         );
       })}
@@ -124,10 +127,10 @@ function VirtualMembers({
   );
 }
 
-function rowProps(member: RoomMember, bridgeBot?: string) {
+function rowProps(room: Room, member: RoomMember, bridgeBot?: string) {
   return {
     userId: member.userId,
-    name: member.name,
+    name: memberName(room, member.userId),
     avatarMxc: member.getMxcAvatarUrl(),
     role: roleLabel(member, bridgeBot),
   };

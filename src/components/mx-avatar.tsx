@@ -1,7 +1,7 @@
 import { memo, useState } from 'react';
 import { type PlatformIcon, detectPlatform, glyphColor, platformById } from '@/lib/platform-icons';
 import { cn } from '@/lib/utils';
-import { networkColor } from '@/matrix/bridge';
+import { announcedNetworkName, networkColor } from '@/matrix/bridge';
 import { useThumbnail } from '@/matrix/media';
 import { type NetworkIconChoice, useSettings } from '@/store/settings';
 
@@ -109,7 +109,7 @@ export const NetworkIcon = memo(function NetworkIcon({
       ? platformById(effective.id)
       : effective
         ? undefined
-        : detectPlatform(networkId, name);
+        : detectPlatform(networkId, announcedNetworkName(networkId) ?? name);
   const wantsBridgeAvatar = !platform && effective?.kind !== 'custom';
   const src = useThumbnail(wantsBridgeAvatar ? avatarMxc : undefined, size);
   const [failed, setFailed] = useState(false);

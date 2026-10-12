@@ -12,7 +12,8 @@ import {
 } from 'matrix-js-sdk';
 import { create } from 'zustand';
 import { getLocale, t } from '@/i18n';
-import { type BridgeInfo, getBridgeInfo } from './bridge';
+import { useSettings } from '@/store/settings';
+import { type BridgeInfo, getBridgeInfo, isOwnGhost, setNetworkAliases } from './bridge';
 import { describeEvent, isMessageEvent } from './event-text';
 import { getNotifyLevel, type NotifyLevel } from './push-rules';
 
@@ -107,8 +108,35 @@ function accountNameFromSpace(name: string): string {
   return match ? match[1] : name;
 }
 
+/**
+ * Picks one network key per bridge bot: the one its personal space announces
+ * (the bridge's current key), else the most common one among its rooms.
+ */
+function networkAliases(rooms: Room[]): Map<string, string> {
+  const counts = new Map<string, Map<string, number>>();
+  const fromSpace = new Map<string, string>();
+  for (const room of rooms) {
+    const membership = room.getMyMembership();
+    if (membership !== KnownMembership.Join && membership !== KnownMembership.Invite) continue;
+    const bridge = getBridgeInfo(room);
+    if (!bridge?.bridgeBot) continue;
+    if (room.isSpaceRoom() && bridge.roomType === PERSONAL_SPACE) fromSpace.set(bridge.bridgeBot, bridge.protocolId);
+    const perBot = counts.get(bridge.bridgeBot) ?? new Map<string, number>();
+    perBot.set(bridge.protocolId, (perBot.get(bridge.protocolId) ?? 0) + 1);
+    counts.set(bridge.bridgeBot, perBot);
+  }
+  const aliases = new Map<string, string>();
+  for (const [bot, perBot] of counts) {
+    if (perBot.size < 2) continue;
+    const top = [...perBot].sort((a, b) => b[1] - a[1])[0][0];
+    aliases.set(bot, fromSpace.get(bot) ?? top);
+  }
+  return aliases;
+}
+
 function buildStructure(client: MatrixClient): Structure {
   const rooms = client.getRooms();
+  setNetworkAliases(networkAliases(rooms));
   const directByRoom = new Map<string, string>();
   const direct = client.getAccountData(EventType.Direct)?.getContent<Record<string, string[]>>() ?? {};
   for (const [userId, roomIds] of Object.entries(direct)) {
@@ -215,7 +243,7 @@ function summarize(client: MatrixClient, room: Room, s: Structure): RoomSummary 
     preview = {
       senderName: member?.rawDisplayName || sender,
       text: describeEvent(last),
-      own: sender === me,
+      own: sender === me || isOwnGhost(sender, bridge?.receiver),
     };
   }
 
@@ -334,10 +362,16 @@ export function attachRoomsStore(client: MatrixClient): () => void {
   client.on(ClientEvent.Sync, onSync);
   client.on(MatrixEventEvent.Decrypted, onDecrypted);
 
+  // Renamed networks: every summary carries the network name.
+  const unsubscribeSettings = useSettings.subscribe((state, prev) => {
+    if (state.networkNames !== prev.networkNames) markAll();
+  });
+
   schedule();
 
   return () => {
     if (timer) clearTimeout(timer);
+    unsubscribeSettings();
     client.off(RoomEvent.Timeline, onTimeline);
     client.off(RoomEvent.Receipt, onRoomEvent);
     client.off(RoomEvent.Name, onRoom);

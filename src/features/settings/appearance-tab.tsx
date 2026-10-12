@@ -1,6 +1,5 @@
 import { Check } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { LOCALES, type MessageKey, systemLocale, t } from '@/i18n';
 import { cn } from '@/lib/utils';
 import { type LanguagePref, type ListDensity, type Theme, useSettings } from '@/store/settings';
@@ -11,8 +10,6 @@ const THEMES: { value: Theme; label: MessageKey }[] = [
   { value: 'light', label: 'settings.themeLight' },
   { value: 'dark', label: 'settings.themeDark' },
 ];
-
-const FONT_SIZES = [13, 14, 15, 16, 17];
 
 export function AppearanceTab() {
   const s = useSettings();
@@ -74,6 +71,18 @@ export function AppearanceTab() {
       </Section>
 
       <Section title={t('settings.chatList')}>
+        <SwitchRow
+          label={t('settings.groupRooms')}
+          description={t('settings.groupRoomsDescription')}
+          checked={s.groupRooms}
+          onCheckedChange={(groupRooms) => s.set({ groupRooms })}
+        />
+        <SwitchRow
+          label={t('settings.showRoomIcons')}
+          description={t('settings.showRoomIconsDescription')}
+          checked={s.showRoomIcons}
+          onCheckedChange={(showRoomIcons) => s.set({ showRoomIcons })}
+        />
         <div className="grid grid-cols-2 gap-3">
           <DensityOption
             value="comfortable"
@@ -90,22 +99,6 @@ export function AppearanceTab() {
             description={t('settings.densityCompactDescription')}
           />
         </div>
-      </Section>
-
-      <Section title={t('settings.fontSize')} description={t('settings.fontSizeDescription')}>
-        <ToggleGroup
-          type="single"
-          variant="outline"
-          size="sm"
-          value={String(s.fontSize)}
-          onValueChange={(v) => v && s.set({ fontSize: Number(v) })}
-        >
-          {FONT_SIZES.map((size) => (
-            <ToggleGroupItem key={size} value={String(size)} className="min-w-11 tabular-nums">
-              {size}
-            </ToggleGroupItem>
-          ))}
-        </ToggleGroup>
       </Section>
 
       <Section title={t('settings.timeline')}>

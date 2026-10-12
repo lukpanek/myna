@@ -51,6 +51,8 @@ function usePushRulesVersion(onChange?: () => void): void {
 export function NotificationsTab() {
   const n = useSettings((s) => s.notifications);
   const setNotifications = useSettings((s) => s.setNotifications);
+  const markBridgeHistoryRead = useSettings((s) => s.markBridgeHistoryRead);
+  const setSettings = useSettings((s) => s.set);
   const paused = !!n.pausedUntil && n.pausedUntil > Date.now();
 
   const toggleEnabled = async (enabled: boolean) => {
@@ -83,6 +85,12 @@ export function NotificationsTab() {
           checked={n.showContent}
           disabled={!n.enabled}
           onCheckedChange={(showContent) => setNotifications({ showContent })}
+        />
+        <SwitchRow
+          label={t('settings.markBridgeHistoryRead')}
+          description={t('settings.markBridgeHistoryReadDescription')}
+          checked={markBridgeHistoryRead}
+          onCheckedChange={(value) => setSettings({ markBridgeHistoryRead: value })}
         />
       </Section>
 

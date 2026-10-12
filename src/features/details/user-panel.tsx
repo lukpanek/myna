@@ -6,6 +6,7 @@ import { MxAvatar, NetworkIcon } from '@/components/mx-avatar';
 import { Button } from '@/components/ui/button';
 import { findDirectRoom, openDirectChat, openRoomWhenReady } from '@/features/bridges/direct-chat';
 import { t } from '@/i18n';
+import { isOwnGhost } from '@/matrix/bridge';
 import { useMatrixClient } from '@/matrix/context';
 import { useRerenderOn, useRoom, useRoomSummary } from '@/matrix/hooks';
 import { useRooms } from '@/matrix/rooms-store';
@@ -62,9 +63,13 @@ export function UserPanel({
 
   const me = client.getSafeUserId();
   const isMe = userId === me;
-  const name = member?.name || profile?.name || userId;
-  const avatarMxc = member?.getMxcAvatarUrl() ?? profile?.avatarMxc;
   const bridge = summary?.bridge;
+  // The user's own remote account; bridges often leave it as "Unknown user".
+  const ownGhost = isOwnGhost(userId, bridge?.receiver);
+  const name = ownGhost
+    ? room?.getMember(me)?.rawDisplayName || client.getUser(me)?.displayName || me
+    : (isMe ? member?.rawDisplayName : member?.name) || profile?.name || userId;
+  const avatarMxc = member?.getMxcAvatarUrl() ?? profile?.avatarMxc;
   const isBridgeBot = !!bridge?.bridgeBot && bridge.bridgeBot === userId;
   // In a portal everyone but us is a ghost of the remote network.
   const remote = bridge && !isMe && !isBridgeBot ? bridge : null;
@@ -73,7 +78,7 @@ export function UserPanel({
 
   const dmRoomId = isMe ? null : (findDirectRoom(client, userId) ?? (remote ? findBridgedDm(client, userId) : null));
   // Starting a fresh DM with a ghost is up to the bridge; only offer existing portals there.
-  const canMessage = !isMe && dmRoomId !== roomId && (!!dmRoomId || !remote);
+  const canMessage = !isMe && !ownGhost && dmRoomId !== roomId && (!!dmRoomId || !remote);
 
   const sendMessage = async () => {
     setOpening(true);
@@ -112,7 +117,7 @@ export function UserPanel({
           <MxAvatar mxc={avatarMxc} name={name} seed={userId} size={96} />
           <h3 className="mt-3 max-w-full text-lg leading-tight font-semibold break-words select-text">
             {name}
-            {isMe && <span className="ml-1.5 font-normal text-muted-foreground">({t('details.you')})</span>}
+            {(isMe || ownGhost) && <span className="ml-1.5 font-normal text-muted-foreground">({t('details.you')})</span>}
           </h3>
           {remote ? (
             <span className="mt-2 inline-flex max-w-full items-center gap-1.5 rounded-full border px-2 py-0.5 text-[12px] text-muted-foreground">

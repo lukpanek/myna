@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react';
+import { type ReactNode, useId } from 'react';
 import { Switch } from '@/components/ui/switch';
 import { cn } from '@/lib/utils';
 
@@ -59,13 +59,14 @@ export function SwitchRow({
   onCheckedChange: (checked: boolean) => void;
   disabled?: boolean;
 }) {
+  const descriptionId = useId();
   return (
     <label className={cn('flex cursor-pointer items-center justify-between gap-6 py-2', disabled && 'opacity-60')}>
       <div className="min-w-0">
         <div className="text-sm">{label}</div>
-        {description && <div className="text-[13px] text-muted-foreground">{description}</div>}
+        {description && <div id={descriptionId} className="text-[13px] text-muted-foreground">{description}</div>}
       </div>
-      <Switch checked={checked} onCheckedChange={onCheckedChange} disabled={disabled} />
+      <Switch aria-label={label} aria-describedby={description ? descriptionId : undefined} checked={checked} onCheckedChange={onCheckedChange} disabled={disabled} />
     </label>
   );
 }

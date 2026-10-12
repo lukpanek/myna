@@ -1,5 +1,6 @@
-import { BellOff, Star } from 'lucide-react';
+import { AlarmClock, BellOff, Star } from 'lucide-react';
 import { memo } from 'react';
+import { useShallow } from 'zustand/react/shallow';
 import { toast } from 'sonner';
 import { MxAvatar } from '@/components/mx-avatar';
 import {
@@ -14,6 +15,8 @@ import {
   ContextMenuSubTrigger,
   ContextMenuTrigger,
 } from '@/components/ui/context-menu';
+import { pickReminder, removeReminder, useReminders } from '@/features/later/reminders';
+import { formatWhen } from '@/features/later/when';
 import { t } from '@/i18n';
 import { formatListTime } from '@/lib/time';
 import { cn } from '@/lib/utils';
@@ -21,7 +24,7 @@ import { useMatrixClient } from '@/matrix/context';
 import { NOTIFY_LEVELS, type NotifyLevel, notifyLevelLabel, setNotifyLevel } from '@/matrix/push-rules';
 import { leaveRoom, markRoomRead, markRoomUnread, roomPermalink, toggleRoomTag } from '@/matrix/room-actions';
 import type { RoomSummary } from '@/matrix/rooms-store';
-import type { ListDensity } from '@/store/settings';
+import { type ListDensity, useSettings } from '@/store/settings';
 import { isRoomUnread } from './room-filters';
 
 interface RoomRowProps {
@@ -29,10 +32,13 @@ interface RoomRowProps {
   selected: boolean;
   density: ListDensity;
   showNetwork: boolean;
+  /** Time of the pending reminder for this chat. */
+  reminderAt?: number;
   onOpen: (roomId: string) => void;
 }
 
-export const RoomRow = memo(function RoomRow({ room, selected, density, showNetwork, onOpen }: RoomRowProps) {
+export const RoomRow = memo(function RoomRow({ room, selected, density, showNetwork, reminderAt, onOpen }: RoomRowProps) {
+  const showRoomIcons = useSettings((s) => s.showRoomIcons);
   const unread = isRoomUnread(room);
   const muted = room.notifyLevel === 'mute';
   const badge = room.isDm ? room.unreadCount : room.highlightCount;
@@ -45,21 +51,21 @@ export const RoomRow = memo(function RoomRow({ room, selected, density, showNetw
         onClick={() => onOpen(room.roomId)}
         className={cn(
           'group flex w-full items-center gap-2.5 rounded-md px-2 text-left outline-none',
-          compact ? 'h-8' : 'h-[52px]',
+          'h-full',
           selected
             ? 'bg-sidebar-accent text-sidebar-accent-foreground [--avatar-ring:var(--sidebar-accent)]'
             : 'hover:bg-sidebar-accent/60 [--avatar-ring:var(--sidebar)] hover:[--avatar-ring:var(--sidebar-accent)]',
           muted && !selected && 'opacity-55',
         )}
       >
-        <MxAvatar
+        {showRoomIcons && <MxAvatar
           mxc={room.avatarMxc}
           name={room.name}
           seed={room.dmUserId ?? room.roomId}
           size={compact ? 20 : 36}
           shape={room.isDm ? 'circle' : 'square'}
           network={compact ? null : network}
-        />
+        />}
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-1.5">
             <span className={cn('truncate', unread && !muted ? 'font-semibold text-foreground' : 'font-normal')}>
@@ -67,6 +73,11 @@ export const RoomRow = memo(function RoomRow({ room, selected, density, showNetw
             </span>
             {room.favourite && !compact && <Star className="size-3 shrink-0 fill-current opacity-50" />}
             {muted && <BellOff className="size-3 shrink-0 opacity-60" />}
+            {reminderAt !== undefined && (
+              <span className="shrink-0 opacity-60" title={t('later.reminderAt', { when: formatWhen(reminderAt) })}>
+                <AlarmClock className="size-3" />
+              </span>
+            )}
             {!compact && room.lastTs > 0 && (
               <span
                 className={cn(
@@ -83,7 +94,7 @@ export const RoomRow = memo(function RoomRow({ room, selected, density, showNetw
             <div className="flex items-center gap-1.5">
               <span
                 className={cn(
-                  'truncate text-[13px]',
+                  'truncate text-[0.867em]',
                   unread && !muted ? 'text-foreground/80' : 'text-muted-foreground',
                 )}
               >
@@ -142,6 +153,7 @@ function RoomContextMenu({ room, children }: { room: RoomSummary; children: Reac
         >
           {room.lowPriority ? t('shell.removeLowPriority') : t('shell.sectionLowPriority')}
         </ContextMenuItem>
+        {room.membership === 'join' && <ReminderItems roomId={room.roomId} />}
         <ContextMenuSub>
           <ContextMenuSubTrigger>{t('shell.notifications')}</ContextMenuSubTrigger>
           <ContextMenuSubContent className="w-48">
@@ -176,5 +188,24 @@ function RoomContextMenu({ room, children }: { room: RoomSummary; children: Reac
         </ContextMenuItem>
       </ContextMenuContent>
     </ContextMenu>
+  );
+}
+
+/** Rendered only while the menu is open, so rows do not subscribe to reminders. */
+function ReminderItems({ roomId }: { roomId: string }) {
+  const client = useMatrixClient();
+  const reminders = useReminders(useShallow((s) => s.reminders.filter((r) => r.roomId === roomId)));
+  return (
+    <>
+      <ContextMenuItem onSelect={() => pickReminder(roomId)}>{t('later.remindLater')}</ContextMenuItem>
+      {reminders.map((r) => (
+        <ContextMenuItem
+          key={r.id}
+          onSelect={() => void removeReminder(client, r.id).catch(() => toast.error(t('later.reminderSaveFailed')))}
+        >
+          {t('later.cancelReminder', { when: formatWhen(r.at) })}
+        </ContextMenuItem>
+      ))}
+    </>
   );
 }

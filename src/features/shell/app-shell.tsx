@@ -3,6 +3,9 @@ import { Logo } from '@/components/logo';
 import { useEffect, useState } from 'react';
 import { BridgesPage } from '@/features/bridges/bridges-page';
 import { CryptoPrompts } from '@/features/crypto/crypto-prompts';
+import { ReminderDialog } from '@/features/later/reminder-dialog';
+import { attachReminders, remindersByRoom, useReminders } from '@/features/later/reminders';
+import { attachScheduledSender } from '@/features/later/scheduled';
 import { NewChatDialog } from '@/features/new-chat/new-chat-dialog';
 import { useDesktopNotifications } from '@/features/notifications/use-notifications';
 import { RoomView } from '@/features/room/room-view';
@@ -10,8 +13,10 @@ import { SettingsDialog } from '@/features/settings/settings-dialog';
 import { t } from '@/i18n';
 import { useNativeIntegration } from '@/lib/native';
 import { isMac, modKey } from '@/lib/platform';
+import { attachBackfillReader } from '@/matrix/backfill';
 import { useMatrixClient } from '@/matrix/context';
 import { attachRoomsStore, useRooms } from '@/matrix/rooms-store';
+import { useSettings } from '@/store/settings';
 import { useUi } from '@/store/ui';
 import { QuickSwitcher } from './quick-switcher';
 import { Rail } from './rail';
@@ -27,6 +32,9 @@ export function AppShell({ onLogout }: { onLogout: () => void }) {
   const setSwitcherOpen = useUi((s) => s.setSwitcherOpen);
 
   useEffect(() => attachRoomsStore(client), [client]);
+  useEffect(() => attachBackfillReader(client), [client]);
+  useEffect(() => attachReminders(client), [client]);
+  useEffect(() => attachScheduledSender(client), [client]);
   useNativeIntegration();
   useDesktopNotifications();
   useGlobalShortcuts();
@@ -69,6 +77,7 @@ export function AppShell({ onLogout }: { onLogout: () => void }) {
       <NewChatDialog open={newChatOpen} onOpenChange={setNewChatOpen} />
       <SettingsDialog onLogout={onLogout} />
       <CryptoPrompts />
+      <ReminderDialog />
     </div>
   );
 }
@@ -87,11 +96,12 @@ function NoRoom() {
 
 /** Room ids in the order the sidebar shows them (collapsed sections excluded). */
 function visibleRoomOrder(): string[] {
-  const { view, accountByNetwork, unreadOnly, collapsedSections } = useUi.getState();
+  const { view, accountByNetwork, unreadOnly, collapsedSections, sidebarTab, roomId } = useUi.getState();
   const accountId = view.kind === 'network' ? (accountByNetwork[view.networkId] ?? null) : null;
-  const sections = buildSections(roomsForView(useRooms.getState().rooms, view, accountId), unreadOnly);
+  const later = remindersByRoom(useReminders.getState().reminders);
+  const sections = buildSections(roomsForView(useRooms.getState().rooms, view, accountId), unreadOnly, useSettings.getState().groupRooms, sidebarTab, later);
   return sections.flatMap((s) =>
-    (collapsedSections[s.key] ?? s.defaultCollapsed) ? s.rooms.filter(isRoomUnread) : s.rooms,
+    (collapsedSections[s.key] ?? s.defaultCollapsed) ? s.rooms.filter((r) => isRoomUnread(r) || r.roomId === roomId) : s.rooms,
   ).map((r) => r.roomId);
 }
 

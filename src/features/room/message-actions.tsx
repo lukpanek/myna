@@ -1,5 +1,6 @@
 import { type MatrixClient, type MatrixEvent, MsgType, type Room } from 'matrix-js-sdk';
 import {
+  AlarmClock,
   Code,
   Copy,
   Link2,
@@ -7,6 +8,8 @@ import {
   MessagesSquare,
   MoreHorizontal,
   Pencil,
+  Pin,
+  PinOff,
   Reply,
   SmilePlus,
   Trash2,
@@ -24,9 +27,11 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { EmojiPicker } from '@/features/emoji/emoji-picker';
 import { composerKey, useComposerStore } from '@/features/composer/composer-store';
+import { pickReminder } from '@/features/later/reminders';
 import { t } from '@/i18n';
 import { useMatrixClient } from '@/matrix/context';
 import { stripReplyFallback } from '@/matrix/event-text';
+import { canPin, pinnedEventIds, togglePin } from '@/matrix/pins';
 import { roomPermalink } from '@/matrix/room-actions';
 import { useSettings } from '@/store/settings';
 import { useUi } from '@/store/ui';
@@ -96,6 +101,28 @@ export function getMessageActions(client: MatrixClient, room: Room, event: Matri
         const text = event.replyEventId ? stripReplyFallback(content.body) : content.body;
         void navigator.clipboard.writeText(text).then(() => toast.success(t('room.textCopied')));
       },
+    });
+  }
+  if (!pending && !redacted && !event.isState()) {
+    if (!threadId && canPin(client, room)) {
+      const pinned = pinnedEventIds(room).includes(eventId!);
+      actions.push({
+        key: 'pin',
+        label: pinned ? t('room.unpin') : t('room.pin'),
+        icon: pinned ? PinOff : Pin,
+        separatorBefore: actions.length > 0,
+        onSelect: () =>
+          void togglePin(client, room, eventId!).catch(() =>
+            toast.error(t(pinned ? 'room.unpinFailed' : 'room.pinFailed')),
+          ),
+      });
+    }
+    actions.push({
+      key: 'remind',
+      label: t('later.remindLater'),
+      icon: AlarmClock,
+      separatorBefore: !actions.some((a) => a.key === 'pin') && actions.length > 0,
+      onSelect: () => pickReminder(room.roomId, eventId!),
     });
   }
   if (!pending) {

@@ -24,6 +24,7 @@ import { leaveRoom } from '@/matrix/room-actions';
 import type { RoomSummary } from '@/matrix/rooms-store';
 import { useRooms } from '@/matrix/rooms-store';
 import { useUi } from '@/store/ui';
+import { PinnedMessages } from './pinned-messages';
 import { RoomDialogs } from './room-dialogs';
 import { Timeline } from './timeline';
 import { memberName } from './timeline-utils';
@@ -177,6 +178,7 @@ function RoomHeader({ room, summary }: { room: Room; summary: RoomSummary | unde
       </button>
 
       <div className="ml-auto flex shrink-0 items-center gap-1">
+        <PinnedMessages room={room} />
         <DropdownMenu>
           <Tooltip>
             <TooltipTrigger asChild>

@@ -16,6 +16,7 @@ import { ArrowDown, Loader2, X } from 'lucide-react';
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { toast } from 'sonner';
 import { t } from '@/i18n';
+import { scrollBehavior } from '@/lib/motion';
 import { isWindowFocused } from '@/lib/native';
 import { useEmitterEvent, useMatrixClient } from '@/matrix/context';
 import { markRoomRead } from '@/matrix/room-actions';
@@ -99,7 +100,8 @@ function firstVisibleRow(container: HTMLElement): HTMLElement | null {
 /** Distance from a row's top edge to the end of the timeline content; independent of scroll position. */
 function distanceFromEnd(container: HTMLElement, row: HTMLElement): number {
   const content = container.firstElementChild as HTMLElement;
-  return content.getBoundingClientRect().bottom - row.getBoundingClientRect().top;
+  return (content.getBoundingClientRect().bottom - row.getBoundingClientRect().top)
+    / (useSettings.getState().interfaceScale / 100);
 }
 
 function rowById(container: HTMLElement, id: string): HTMLElement | null {
@@ -483,7 +485,7 @@ export function Timeline({ room }: { room: Room }) {
   const jumpToLatest = () => {
     const el = scrollRef.current;
     if (liveEndRef.current) {
-      el?.scrollTo({ top: 0, behavior: 'smooth' });
+      el?.scrollTo({ top: 0, behavior: scrollBehavior() });
       return;
     }
     reloadLive();
@@ -501,7 +503,7 @@ export function Timeline({ room }: { room: Room }) {
     const divider = el?.querySelector('[data-new-divider]');
     if (divider) {
       stuckRef.current = false;
-      divider.scrollIntoView({ block: 'center', behavior: 'smooth' });
+      divider.scrollIntoView({ block: 'center', behavior: scrollBehavior() });
     } else if (marker?.afterId) {
       void jumpToEvent(marker.afterId, false);
     }

@@ -15,6 +15,7 @@ import { Button } from '@/components/ui/button';
 import { Composer } from '@/features/composer/composer';
 import { composerKey, useComposerStore } from '@/features/composer/composer-store';
 import { t } from '@/i18n';
+import { scrollBehavior } from '@/lib/motion';
 import { isWindowFocused } from '@/lib/native';
 import { useEmitterEvent, useMatrixClient } from '@/matrix/context';
 import { useRoom, useRoomSummary } from '@/matrix/hooks';
@@ -261,7 +262,7 @@ function ThreadView({ room, rootId }: { room: Room; rootId: string }) {
           return;
         }
         stuckRef.current = false;
-        row.scrollIntoView({ block: 'center', behavior: 'smooth' });
+        row.scrollIntoView({ block: 'center', behavior: scrollBehavior() });
         setHighlightId(eventId);
         if (highlightTimer.current) clearTimeout(highlightTimer.current);
         highlightTimer.current = setTimeout(() => setHighlightId(null), HIGHLIGHT_MS);

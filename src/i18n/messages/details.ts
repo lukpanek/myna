@@ -24,11 +24,11 @@ export default defineMessages({
     about: 'O chatu',
     network: 'Síť',
     account: 'Účet',
-    bridgeBot: 'Bot mostu',
+    bridgeBot: 'Bridge bot',
     members: 'Členové',
     encryption: 'Šifrování',
     encryptionOn: 'Zapnuté (end-to-end)',
-    encryptionOffBridge: 'Vypnuté (šifruje až síť za mostem)',
+    encryptionOffBridge: 'Vypnuté (šifruje až síť za bridgem)',
     encryptionOff: 'Vypnuté',
     roomId: 'ID chatu',
     openLinkFailed: 'Odkaz se nepodařilo otevřít.',
@@ -40,7 +40,7 @@ export default defineMessages({
 
     // Leave dialog
     leaveTitle: 'Opustit {name}?',
-    leaveBridged: 'Chat zmizí ze seznamu. Jestli tě most odebere i ze skupiny v {network}, záleží na mostu.',
+    leaveBridged: 'Chat zmizí ze seznamu. Jestli tě bridge odebere i ze skupiny v {network}, záleží na bridgi.',
     leaveMatrix: 'Chat zmizí ze seznamu. Pro návrat budeš potřebovat novou pozvánku, pokud chat není veřejný.',
 
     // Members

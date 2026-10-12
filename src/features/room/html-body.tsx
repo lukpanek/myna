@@ -83,6 +83,7 @@ function MentionPill({ userId, fallback }: { userId: string; fallback?: string }
       title={userId}
       className={cn(
         'rounded px-0.5 font-medium',
+        'mx-user-mention',
         isMe ? 'bg-mention text-mention-foreground' : 'bg-primary/10 text-primary',
       )}
     >

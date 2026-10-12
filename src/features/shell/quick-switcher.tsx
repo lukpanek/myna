@@ -10,11 +10,13 @@ import {
 } from '@/components/ui/command';
 import { t } from '@/i18n';
 import { useRooms } from '@/matrix/rooms-store';
+import { useSettings } from '@/store/settings';
 import { useUi } from '@/store/ui';
 import { isRoomUnread } from './room-filters';
 
 /** ⌘K: jump to any chat across all networks. Unread chats first, then by recency. */
 export function QuickSwitcher() {
+  const showRoomIcons = useSettings((s) => s.showRoomIcons);
   const open = useUi((s) => s.switcherOpen);
   const setOpen = useUi((s) => s.setSwitcherOpen);
   const openRoom = useUi((s) => s.openRoom);
@@ -44,7 +46,7 @@ export function QuickSwitcher() {
               }}
               className="gap-2.5"
             >
-              <MxAvatar
+              {showRoomIcons && <MxAvatar
                 mxc={r.avatarMxc}
                 name={r.name}
                 seed={r.dmUserId ?? r.roomId}
@@ -52,7 +54,7 @@ export function QuickSwitcher() {
                 shape={r.isDm ? 'circle' : 'square'}
                 network={r.bridge ? { id: r.bridge.networkId, avatarMxc: r.bridge.networkAvatar } : null}
                 className="[--avatar-ring:var(--popover)]"
-              />
+              />}
               <span className={isRoomUnread(r) ? 'font-semibold' : undefined}>{r.name}</span>
               {r.bridge && <span className="ml-auto text-xs text-muted-foreground">{r.bridge.networkName}</span>}
             </CommandItem>

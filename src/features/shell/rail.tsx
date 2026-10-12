@@ -1,18 +1,29 @@
-import { Hash, Image, Inbox, Plug, Settings } from 'lucide-react';
+import { CheckCheck, Hash, Inbox, Pencil, Plug, Settings, Trash2 } from 'lucide-react';
 import { type ReactNode, useMemo, useState } from 'react';
+import { toast } from 'sonner';
 import { useShallow } from 'zustand/react/shallow';
 import { MxAvatar, NetworkIcon } from '@/components/mx-avatar';
-import { ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuTrigger } from '@/components/ui/context-menu';
+import {
+  ContextMenu,
+  ContextMenuContent,
+  ContextMenuItem,
+  ContextMenuSeparator,
+  ContextMenuTrigger,
+} from '@/components/ui/context-menu';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { NetworkIconDialog, type NetworkIconTarget } from '@/features/bridges/network-icon-dialog';
 import { t } from '@/i18n';
 import { cn } from '@/lib/utils';
+import { useMatrixClient } from '@/matrix/context';
+import { markRoomsRead } from '@/matrix/room-actions';
 import { useRooms } from '@/matrix/rooms-store';
 import { type View, useUi, viewKey } from '@/store/ui';
-import { roomsForView, unreadTotals } from './room-filters';
+import { RemoveSpaceDialog, type RemoveTarget } from './remove-space-dialog';
+import { isRoomUnread, roomsForView, unreadTotals } from './room-filters';
 import { UserMenu } from './user-menu';
 
 export function Rail({ onLogout }: { onLogout: () => void }) {
+  const client = useMatrixClient();
   const { rooms, networks, spaces } = useRooms(
     useShallow((s) => ({ rooms: s.rooms, networks: s.networks, spaces: s.spaces })),
   );
@@ -45,6 +56,14 @@ export function Rail({ onLogout }: { onLogout: () => void }) {
 
   const active = page === 'chat' ? viewKey(view) : null;
   const [iconTarget, setIconTarget] = useState<NetworkIconTarget | null>(null);
+  const [removeTarget, setRemoveTarget] = useState<RemoveTarget | null>(null);
+
+  const markViewRead = async (view: View) => {
+    const unread = roomsForView(useRooms.getState().rooms, view, null)
+      .filter((r) => r.membership === 'join' && isRoomUnread(r))
+      .map((r) => r.roomId);
+    if ((await markRoomsRead(client, unread)) > 0) toast.error(t('shell.markAllFailed'));
+  };
 
   return (
     <nav className="flex w-[68px] shrink-0 flex-col items-center gap-1 bg-rail pt-2 pb-3 text-rail-foreground">
@@ -69,12 +88,18 @@ export function Rail({ onLogout }: { onLogout: () => void }) {
             onClick={() => setView({ kind: 'network', networkId: n.id })}
             bare
             menu={
-              <ContextMenuItem
-                onSelect={() => setIconTarget({ networkId: n.id, name: n.name, avatarMxc: n.avatarMxc })}
-              >
-                <Image />
-                {t('bridges.changeIcon')}
-              </ContextMenuItem>
+              <>
+                <ContextMenuItem
+                  onSelect={() => setIconTarget({ networkId: n.id, name: n.name, avatarMxc: n.avatarMxc })}
+                >
+                  <Pencil />
+                  {t('bridges.editNetwork')}
+                </ContextMenuItem>
+                <ViewMenuItems
+                  onMarkRead={() => void markViewRead({ kind: 'network', networkId: n.id })}
+                  onRemove={() => setRemoveTarget({ view: { kind: 'network', networkId: n.id }, name: n.name })}
+                />
+              </>
             }
           >
             <NetworkIcon networkId={n.id} avatarMxc={n.avatarMxc} name={n.name} size={40} className="rounded-xl" />
@@ -101,6 +126,12 @@ export function Rail({ onLogout }: { onLogout: () => void }) {
             totals={totals.get(`space:${s.roomId}`)}
             onClick={() => setView({ kind: 'space', spaceId: s.roomId })}
             bare
+            menu={
+              <ViewMenuItems
+                onMarkRead={() => void markViewRead({ kind: 'space', spaceId: s.roomId })}
+                onRemove={() => setRemoveTarget({ view: { kind: 'space', spaceId: s.roomId }, name: s.name })}
+              />
+            }
           >
             <MxAvatar mxc={s.avatarMxc} name={s.name} seed={s.roomId} size={40} shape="square" />
           </RailItem>
@@ -115,7 +146,24 @@ export function Rail({ onLogout }: { onLogout: () => void }) {
       </RailItem>
       <UserMenu onLogout={onLogout} />
       <NetworkIconDialog target={iconTarget} onOpenChange={(open) => !open && setIconTarget(null)} />
+      <RemoveSpaceDialog target={removeTarget} onOpenChange={(open) => !open && setRemoveTarget(null)} />
     </nav>
+  );
+}
+
+function ViewMenuItems({ onMarkRead, onRemove }: { onMarkRead: () => void; onRemove: () => void }) {
+  return (
+    <>
+      <ContextMenuItem onSelect={onMarkRead}>
+        <CheckCheck />
+        {t('shell.markAllRead')}
+      </ContextMenuItem>
+      <ContextMenuSeparator />
+      <ContextMenuItem variant="destructive" onSelect={onRemove}>
+        <Trash2 />
+        {t('shell.removeSpace')}
+      </ContextMenuItem>
+    </>
   );
 }
 

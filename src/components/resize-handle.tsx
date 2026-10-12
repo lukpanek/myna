@@ -1,4 +1,5 @@
 import { type KeyboardEvent, type PointerEvent, useRef } from 'react';
+import { useSettings } from '@/store/settings';
 import { cn } from '@/lib/utils';
 
 interface ResizeHandleProps {
@@ -32,7 +33,7 @@ export function ResizeHandle({ edge, width, min, max, onResize, onReset, label }
   };
   const onPointerMove = (e: PointerEvent<HTMLDivElement>) => {
     if (!drag.current) return;
-    onResize(clamp(drag.current.width + (e.clientX - drag.current.x) * dir));
+    onResize(clamp(drag.current.width + (e.clientX - drag.current.x) * dir / (useSettings.getState().interfaceScale / 100)));
   };
   const onPointerUp = (e: PointerEvent<HTMLDivElement>) => {
     if (!drag.current) return;

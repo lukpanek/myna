@@ -15,4 +15,7 @@ structure; it lists module contracts and UX rules.
   mautrix bridgev2 provisioning API (`/_matrix/provision/v3`).
 - Native side (`src-tauri/`): `media://` protocol (authenticated media + disk
   cache), cookie login webview, notifications.
+- macOS notifications need a signed bundle: `pnpm tauri dev` runs the binary inside
+  `target/debug/Myna Dev.app` (`src-tauri/scripts/dev-runner.sh`), signed with
+  `$APPLE_SIGNING_IDENTITY` (ad-hoc builds get denied).
 - License: AGPL-3.0-only (code ported from Sable/Cinny and mautrix-manager).

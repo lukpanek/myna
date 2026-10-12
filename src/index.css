@@ -182,3 +182,110 @@
 [data-scrolling] > * {
   pointer-events: none;
 }
+
+/* Zoom scales pixel-based controls too; text size remains independently adjustable. */
+html {
+  zoom: var(--interface-scale, 1);
+  --app-viewport-height: calc(100dvh / var(--interface-scale, 1));
+}
+
+.high-contrast {
+  --background: #fff;
+  --foreground: #111;
+  --card: #fff;
+  --card-foreground: #111;
+  --popover: #fff;
+  --popover-foreground: #111;
+  --muted: #eee;
+  --muted-foreground: #444;
+  --secondary: #eee;
+  --secondary-foreground: #111;
+  --accent: #ddd;
+  --accent-foreground: #111;
+  --border: #767676;
+  --input: #767676;
+  --primary: #004f99;
+  --primary-foreground: #fff;
+  --ring: #004f99;
+  --destructive: #a51b16;
+  --mention: #a51b16;
+  --mention-foreground: #fff;
+  --unread: #a51b16;
+  --rail: #e5e5e5;
+  --rail-foreground: #111;
+  --sidebar: #f5f5f5;
+  --sidebar-foreground: #111;
+  --sidebar-accent: #ddd;
+  --sidebar-accent-foreground: #111;
+  --sidebar-border: #767676;
+  --sidebar-primary: #004f99;
+  --sidebar-primary-foreground: #fff;
+  --sidebar-ring: #004f99;
+}
+
+.dark.high-contrast {
+  --background: #101010;
+  --foreground: #fff;
+  --card: #101010;
+  --card-foreground: #fff;
+  --popover: #101010;
+  --popover-foreground: #fff;
+  --muted: #262626;
+  --muted-foreground: #d1d1d1;
+  --secondary: #262626;
+  --secondary-foreground: #fff;
+  --accent: #333;
+  --accent-foreground: #fff;
+  --border: #999;
+  --input: #999;
+  --primary: #8ecbff;
+  --primary-foreground: #101010;
+  --ring: #8ecbff;
+  --destructive: #ffb4ab;
+  --mention: #ffb4ab;
+  --mention-foreground: #101010;
+  --unread: #ffb4ab;
+  --rail: #000;
+  --rail-foreground: #fff;
+  --sidebar: #101010;
+  --sidebar-foreground: #fff;
+  --sidebar-accent: #333;
+  --sidebar-accent-foreground: #fff;
+  --sidebar-border: #999;
+  --sidebar-primary: #8ecbff;
+  --sidebar-primary-foreground: #101010;
+  --sidebar-ring: #8ecbff;
+}
+
+.accessible-names .mx-sender-name,
+.accessible-names .mx-user-mention,
+.accessible-names .mention-pill {
+  color: var(--foreground);
+}
+
+.accessible-names .mx-user-mention,
+.accessible-names .mention-pill {
+  background: var(--accent);
+  text-decoration: underline;
+  text-underline-offset: 0.15em;
+  font-weight: 600;
+}
+
+/* Include portalled menus/dialogs and CSS animations on pseudo-elements. */
+.reduce-motion *,
+.reduce-motion *::before,
+.reduce-motion *::after {
+  animation-duration: 0.01ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.01ms !important;
+  scroll-behavior: auto !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

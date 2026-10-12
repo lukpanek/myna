@@ -2,10 +2,10 @@ import {
   ChevronRight,
   CircleAlert,
   Ellipsis,
-  Image,
   LoaderCircle,
   LogOut,
   MessageSquare,
+  Pencil,
   Plus,
   RefreshCw,
   RotateCcw,
@@ -241,8 +241,8 @@ function BridgeSection({
                 })
               }
             >
-              <Image />
-              {t('bridges.changeIcon')}
+              <Pencil />
+              {t('bridges.editNetwork')}
             </DropdownMenuItem>
             <DropdownMenuItem onSelect={() => void useBridges.getState().refreshBridge(entry.url)}>
               <RefreshCw />

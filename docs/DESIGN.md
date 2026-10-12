@@ -53,6 +53,8 @@ network. Beeper-like account handling, Slack-like UX. UI languages: Czech, Slova
   `loadMediaBlobUrl`. Desktop uses `media://`; browser dev falls back to blobs.
 - `event-text.ts` — `describeEvent` (previews), `isMessageEvent`, voice helpers.
 - `room-actions.ts` — mark read/unread, tags, leave, permalink.
+- `pins.ts` — `m.room.pinned_events`: `pinnedEventIds`, `canPin`, `togglePin`.
+- `backfill.ts` — `isBackfill` (bridge history predates `m.room.create`), auto-read of old history.
 - `hooks.ts` — `useRoom`, `useRoomSummary`, `useRerenderOn`.
 - `context.tsx` — `useMatrixClient()`, `useEmitterEvent(emitter, event, fn)`.
 
@@ -79,13 +81,15 @@ network. Beeper-like account handling, Slack-like UX. UI languages: Czech, Slova
 | `features/crypto/crypto-prompts.tsx` | `CryptoPrompts()` | settings |
 | `features/bridges/bridges-page.tsx` | `BridgesPage()` | bridges |
 | `features/new-chat/new-chat-dialog.tsx` | `NewChatDialog({ open, onOpenChange })` | bridges |
+| `features/later/reminders.ts` | `useReminders`, `attachReminders(client)`; account data `cz.myna.reminders` | later |
+| `features/later/scheduled.ts` | `useScheduled` (localStorage), `attachScheduledSender(client)` | later |
 | `lib/native.ts` | native integration (below) | native |
 
 `lib/native.ts`:
 
 ```ts
 useNativeIntegration(): void            // media session, dock badge, focus tracking
-showNotification(o: { title: string; body: string; roomId: string; sound: boolean }): Promise<void>
+showNotification(o: { title: string; body: string; roomId: string; eventId?: string; sound: boolean }): Promise<void>
 isWindowFocused(): boolean
 openExternal(url: string): Promise<void>
 cookieLogin(o: { url: string; userAgent?: string; cookies: { name: string; domain?: string }[];

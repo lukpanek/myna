@@ -1,6 +1,7 @@
 import { EventStatus, EventType, type MatrixEvent, RelationType, type Room } from 'matrix-js-sdk';
 import { t } from '@/i18n';
 import { isSameDay } from '@/lib/time';
+import { bridgeReceiver, isOwnGhost } from '@/matrix/bridge';
 
 const POLL_TYPES = new Set(['m.poll.start', 'org.matrix.msc3381.poll.start']);
 const SYSTEM_TYPES = new Set<string>([
@@ -14,13 +15,26 @@ const SYSTEM_TYPES = new Set<string>([
 ]);
 const GROUP_WINDOW_MS = 5 * 60 * 1000;
 
+/** Who a message is from for display: the user's own bridge ghost counts as the user. */
+export function displaySender(room: Room, userId: string | undefined, receiver = bridgeReceiver(room)): string {
+  return isOwnGhost(userId, receiver) ? room.myUserId : (userId ?? '');
+}
+
+/**
+ * Display name. The user's own name skips the SDK's "(@mxid)" disambiguation,
+ * which kicks in when the own bridge ghost has the same name.
+ */
 export function memberName(room: Room, userId: string | undefined): string {
   if (!userId) return '';
-  return room.getMember(userId)?.name || userId;
+  userId = displaySender(room, userId);
+  const member = room.getMember(userId);
+  return (userId === room.myUserId ? member?.rawDisplayName : member?.name) || userId;
 }
 
 export function senderName(room: Room, event: MatrixEvent): string {
-  return event.sender?.name || memberName(room, event.getSender());
+  const sender = displaySender(room, event.getSender());
+  if (sender === room.myUserId) return memberName(room, sender);
+  return event.sender?.name || memberName(room, sender);
 }
 
 /** Stable React key: local echoes keep their txn id after the server assigns an event id. */
@@ -144,6 +158,7 @@ interface BuildOptions {
 /** Turns raw timeline events into day sections with grouping, read marker and receipts. */
 export function buildSections(events: MatrixEvent[], opts: BuildOptions): DaySection[] {
   const { room, me, showSystem, showReceipts, versions, newAfterId, skipId } = opts;
+  const receiver = bridgeReceiver(room);
 
   // Receipts: walk newest → oldest so receipts on hidden events land on the nearest older visible row.
   const receiptsByIndex = new Map<number, string[]>();
@@ -199,7 +214,7 @@ export function buildSections(events: MatrixEvent[], opts: BuildOptions): DaySec
       !system &&
       !!prev &&
       !prev.system &&
-      prev.event.getSender() === event.getSender() &&
+      displaySender(room, prev.event.getSender(), receiver) === displaySender(room, event.getSender(), receiver) &&
       ts - prev.event.getTs() < GROUP_WINDOW_MS;
     const item: EventItem = {
       kind: 'event',
