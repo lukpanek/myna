@@ -1,0 +1,83 @@
+//! Main window lifecycle: on macOS closing the window only hides it, so the app
+//! keeps syncing and notifying until the user quits with ⌘Q.
+
+use std::sync::atomic::{AtomicBool, Ordering};
+
+use tauri::{
+  plugin::{Builder as PluginBuilder, TauriPlugin},
+  AppHandle, Manager, RunEvent, Runtime, Url, Window, WindowEvent,
+};
+use tauri_plugin_opener::OpenerExt;
+
+const MAIN: &str = "main";
+
+static QUITTING: AtomicBool = AtomicBool::new(false);
+
+pub fn show_main<R: Runtime>(app: &AppHandle<R>) {
+  if let Some(window) = app.get_webview_window(MAIN) {
+    let _ = window.unminimize();
+    let _ = window.show();
+    let _ = window.set_focus();
+  }
+}
+
+pub fn on_window_event<R: Runtime>(window: &Window<R>, event: &WindowEvent) {
+  if cfg!(target_os = "macos") && window.label() == MAIN && !QUITTING.load(Ordering::Relaxed) {
+    if let WindowEvent::CloseRequested { api, .. } = event {
+      api.prevent_close();
+      hide(window);
+    }
+  }
+}
+
+fn hide<R: Runtime>(window: &Window<R>) {
+  // Hiding a fullscreen window leaves an empty black Space behind; leave fullscreen first.
+  if window.is_fullscreen().unwrap_or(false) {
+    let _ = window.set_fullscreen(false);
+    let window = window.clone();
+    tauri::async_runtime::spawn(async move {
+      tokio::time::sleep(std::time::Duration::from_millis(800)).await;
+      let _ = window.hide();
+    });
+  } else {
+    let _ = window.hide();
+  }
+}
+
+pub fn on_run_event<R: Runtime>(app: &AppHandle<R>, event: RunEvent) {
+  match event {
+    RunEvent::ExitRequested { .. } => QUITTING.store(true, Ordering::Relaxed),
+    #[cfg(target_os = "macos")]
+    RunEvent::Reopen { .. } => show_main(app),
+    _ => {
+      let _ = app;
+    }
+  }
+}
+
+/// Safety net behind the frontend's link interception: the main webview never
+/// navigates away from the app; web links open in the default browser instead.
+pub fn navigation_guard<R: Runtime>() -> TauriPlugin<R> {
+  PluginBuilder::new("navigation-guard")
+    .on_navigation(|webview, url| {
+      if webview.label() != MAIN || is_app_url(url) {
+        return true;
+      }
+      if matches!(url.scheme(), "http" | "https" | "mailto") {
+        let _ = webview.app_handle().opener().open_url(url.as_str(), None::<&str>);
+      }
+      false
+    })
+    .build()
+}
+
+fn is_app_url(url: &Url) -> bool {
+  match url.scheme() {
+    "tauri" | "about" | "blob" | "data" => true,
+    // Dev server and the Windows/Android custom-protocol host.
+    "http" | "https" => url
+      .host_str()
+      .is_some_and(|h| h == "localhost" || h == "127.0.0.1" || h.ends_with(".localhost")),
+    _ => false,
+  }
+}

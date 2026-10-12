@@ -1,0 +1,184 @@
+@import 'tailwindcss';
+@import 'tw-animate-css';
+
+@custom-variant dark (&:is(.dark *));
+
+/* System fonts: native feel, zero loading cost. */
+@theme inline {
+  --font-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI Variable', 'Segoe UI', system-ui, sans-serif;
+  --font-mono: ui-monospace, 'SF Mono', 'Cascadia Code', Menlo, monospace;
+
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-mention: var(--mention);
+  --color-mention-foreground: var(--mention-foreground);
+  --color-highlight: var(--highlight);
+  --color-unread: var(--unread);
+  --color-rail: var(--rail);
+  --color-rail-foreground: var(--rail-foreground);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+}
+
+:root {
+  --radius: 0.5rem;
+  --background: oklch(1 0 0);
+  --foreground: oklch(0.2 0.005 285);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.2 0.005 285);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.2 0.005 285);
+  /* One accent, used sparingly: selection, own reactions, links, unread line. */
+  --primary: oklch(0.5 0.13 250);
+  --primary-foreground: oklch(0.985 0 0);
+  --secondary: oklch(0.965 0.002 285);
+  --secondary-foreground: oklch(0.25 0.005 285);
+  --muted: oklch(0.965 0.002 285);
+  --muted-foreground: oklch(0.5 0.01 285);
+  --accent: oklch(0.955 0.004 285);
+  --accent-foreground: oklch(0.2 0.005 285);
+  --destructive: oklch(0.577 0.245 27.325);
+  --border: oklch(0.91 0.004 285);
+  --input: oklch(0.88 0.004 285);
+  --ring: oklch(0.5 0.13 250);
+  --mention: oklch(0.6 0.2 25);
+  --mention-foreground: oklch(0.99 0 0);
+  --highlight: oklch(0.97 0.05 90);
+  --unread: oklch(0.6 0.2 25);
+  --rail: oklch(0.93 0.004 285);
+  --rail-foreground: oklch(0.3 0.005 285);
+  --sidebar: oklch(0.975 0.002 285);
+  --sidebar-foreground: oklch(0.3 0.005 285);
+  --sidebar-primary: oklch(0.5 0.13 250);
+  --sidebar-primary-foreground: oklch(0.985 0 0);
+  --sidebar-accent: oklch(0.93 0.004 285);
+  --sidebar-accent-foreground: oklch(0.2 0.005 285);
+  --sidebar-border: oklch(0.91 0.004 285);
+  --sidebar-ring: oklch(0.5 0.13 250);
+}
+
+.dark {
+  --background: oklch(0.2 0.004 285);
+  --foreground: oklch(0.93 0.003 285);
+  --card: oklch(0.23 0.004 285);
+  --card-foreground: oklch(0.93 0.003 285);
+  --popover: oklch(0.24 0.005 285);
+  --popover-foreground: oklch(0.93 0.003 285);
+  --primary: oklch(0.68 0.13 250);
+  --primary-foreground: oklch(0.16 0.01 250);
+  --secondary: oklch(0.27 0.005 285);
+  --secondary-foreground: oklch(0.93 0.003 285);
+  --muted: oklch(0.27 0.005 285);
+  --muted-foreground: oklch(0.68 0.01 285);
+  --accent: oklch(0.28 0.005 285);
+  --accent-foreground: oklch(0.95 0.003 285);
+  --destructive: oklch(0.65 0.2 25);
+  --border: oklch(1 0 0 / 9%);
+  --input: oklch(1 0 0 / 14%);
+  --ring: oklch(0.68 0.13 250);
+  --mention: oklch(0.62 0.2 25);
+  --mention-foreground: oklch(0.99 0 0);
+  --highlight: oklch(0.32 0.05 90);
+  --unread: oklch(0.65 0.2 25);
+  --rail: oklch(0.15 0.004 285);
+  --rail-foreground: oklch(0.85 0.003 285);
+  --sidebar: oklch(0.175 0.004 285);
+  --sidebar-foreground: oklch(0.8 0.005 285);
+  --sidebar-primary: oklch(0.68 0.13 250);
+  --sidebar-primary-foreground: oklch(0.16 0.01 250);
+  --sidebar-accent: oklch(0.25 0.005 285);
+  --sidebar-accent-foreground: oklch(0.96 0.003 285);
+  --sidebar-border: oklch(1 0 0 / 7%);
+  --sidebar-ring: oklch(0.68 0.13 250);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  html,
+  body,
+  #root {
+    @apply h-full overflow-hidden;
+  }
+  body {
+    @apply bg-background text-foreground font-sans antialiased;
+    font-size: var(--app-font-size, 15px);
+    -webkit-user-select: none;
+    user-select: none;
+    cursor: default;
+  }
+  /* Everything clickable shows the hand; utilities (e.g. cursor-col-resize) still win. */
+  button,
+  a[href],
+  summary,
+  select,
+  label[for],
+  input[type='checkbox'],
+  input[type='radio'],
+  input[type='file'],
+  input[type='range'],
+  [role='button'],
+  [role='link'],
+  [role='tab'],
+  [role='switch'],
+  [role='checkbox'],
+  [role='radio'],
+  [role='option'],
+  [role='menuitem'],
+  [role='menuitemcheckbox'],
+  [role='menuitemradio'],
+  [role='slider'] {
+    cursor: pointer;
+  }
+  :disabled,
+  [aria-disabled='true'],
+  [data-disabled] {
+    cursor: default;
+  }
+  /* Message text, inputs and editors stay selectable; app chrome does not. */
+  input,
+  textarea,
+  [contenteditable],
+  .selectable {
+    -webkit-user-select: text;
+    user-select: text;
+  }
+}
+
+/* Long timelines: let the browser skip layout for off-screen messages. */
+.cv-auto {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 48px;
+}
+
+/* Set on the timeline scroller while it moves (see timeline.tsx). */
+[data-scrolling] > * {
+  pointer-events: none;
+}
