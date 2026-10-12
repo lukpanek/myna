@@ -17,10 +17,18 @@ import { type BridgeInfo, getBridgeInfo, isOwnGhost, setNetworkAliases } from '.
 import { describeEvent, isMessageEvent } from './event-text';
 import { getNotifyLevel, type NotifyLevel } from './push-rules';
 
+export interface RoomReader {
+  userId: string;
+  name: string;
+  avatarMxc?: string;
+}
+
 export interface RoomPreview {
   senderName: string;
   text: string;
   own: boolean;
+  /** Who has read the user's own last message (bridge bots and the user's ghost excluded). */
+  seenBy?: RoomReader[];
 }
 
 export interface RoomSummary {
@@ -212,6 +220,20 @@ function computeUnread(client: MatrixClient, room: Room, last: MatrixEvent | und
   return !!lastId && !room.hasUserReadEvent(me, lastId);
 }
 
+function readersOf(room: Room, event: MatrixEvent, me: string, bridge: BridgeInfo | null, s: Structure) {
+  const readers: RoomReader[] = [];
+  for (const userId of room.getUsersReadUpTo(event)) {
+    if (userId === me || s.bridgeBots.has(userId) || isOwnGhost(userId, bridge?.receiver)) continue;
+    const member = room.getMember(userId);
+    readers.push({
+      userId,
+      name: member?.rawDisplayName || userId,
+      avatarMxc: member?.getMxcAvatarUrl() ?? undefined,
+    });
+  }
+  return readers.length ? readers : undefined;
+}
+
 function summarize(client: MatrixClient, room: Room, s: Structure): RoomSummary | null {
   const membership = room.getMyMembership();
   if (membership !== KnownMembership.Join && membership !== KnownMembership.Invite) return null;
@@ -240,10 +262,12 @@ function summarize(client: MatrixClient, room: Room, s: Structure): RoomSummary 
   if (last) {
     const sender = last.getSender() ?? '';
     const member = room.getMember(sender);
+    const own = sender === me || isOwnGhost(sender, bridge?.receiver);
     preview = {
       senderName: member?.rawDisplayName || sender,
       text: describeEvent(last),
-      own: sender === me || isOwnGhost(sender, bridge?.receiver),
+      own,
+      seenBy: own ? readersOf(room, last, me, bridge, s) : undefined,
     };
   }
 

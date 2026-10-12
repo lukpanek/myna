@@ -190,10 +190,9 @@ export function buildSections(events: MatrixEvent[], opts: BuildOptions): DaySec
   for (let i = 0; i < events.length; i++) {
     const event = events[i];
     const id = event.getId();
-    if (!markerPassed && id === newAfterId) {
-      markerPassed = true;
-      continue;
-    }
+    // The last read event itself still renders; the divider goes before the next message.
+    const isMarker = !markerPassed && id === newAfterId;
+    if (isMarker) markerPassed = true;
     if (id === skipId || !isVisibleEvent(event, showSystem)) continue;
 
     const ts = event.getTs();
@@ -203,7 +202,14 @@ export function buildSections(events: MatrixEvent[], opts: BuildOptions): DaySec
       prev = null;
     }
 
-    if (markerPassed && newAfterId && !newInserted && !event.isState() && event.getSender() !== me) {
+    if (
+      !isMarker &&
+      markerPassed &&
+      newAfterId &&
+      !newInserted &&
+      !event.isState() &&
+      displaySender(room, event.getSender(), receiver) !== me
+    ) {
       section.items.push({ kind: 'new', key: 'new-divider' });
       newInserted = true;
       prev = null;

@@ -23,7 +23,7 @@ import { cn } from '@/lib/utils';
 import { useMatrixClient } from '@/matrix/context';
 import { NOTIFY_LEVELS, type NotifyLevel, notifyLevelLabel, setNotifyLevel } from '@/matrix/push-rules';
 import { leaveRoom, markRoomRead, markRoomUnread, roomPermalink, toggleRoomTag } from '@/matrix/room-actions';
-import type { RoomSummary } from '@/matrix/rooms-store';
+import type { RoomReader, RoomSummary } from '@/matrix/rooms-store';
 import { type ListDensity, useSettings } from '@/store/settings';
 import { isRoomUnread } from './room-filters';
 
@@ -39,6 +39,7 @@ interface RoomRowProps {
 
 export const RoomRow = memo(function RoomRow({ room, selected, density, showNetwork, reminderAt, onOpen }: RoomRowProps) {
   const showRoomIcons = useSettings((s) => s.showRoomIcons);
+  const showReadReceipts = useSettings((s) => s.showReadReceipts);
   const unread = isRoomUnread(room);
   const muted = room.notifyLevel === 'mute';
   const badge = room.isDm ? room.unreadCount : room.highlightCount;
@@ -78,10 +79,12 @@ export const RoomRow = memo(function RoomRow({ room, selected, density, showNetw
                 <AlarmClock className="size-3" />
               </span>
             )}
+            {!compact && showReadReceipts && room.preview?.seenBy && <SeenBy readers={room.preview.seenBy} />}
             {!compact && room.lastTs > 0 && (
               <span
                 className={cn(
-                  'ml-auto shrink-0 text-[11px] tabular-nums',
+                  !(showReadReceipts && room.preview?.seenBy) && 'ml-auto',
+                  'shrink-0 text-[11px] tabular-nums',
                   unread && !muted ? 'text-foreground' : 'text-muted-foreground',
                 )}
               >
@@ -116,6 +119,23 @@ export const RoomRow = memo(function RoomRow({ room, selected, density, showNetw
     </RoomContextMenu>
   );
 });
+
+/** Messenger-style "seen": the first reader's avatar, then +N for the rest. */
+function SeenBy({ readers }: { readers: RoomReader[] }) {
+  const [first] = readers;
+  const names = readers.map((r) => r.name);
+  return (
+    <span
+      className="ml-auto flex shrink-0 items-center gap-0.5 text-[10px] text-muted-foreground tabular-nums"
+      title={t('room.readBy', {
+        names: names.slice(0, 15).join(', ') + (names.length > 15 ? ` ${t('room.andMore', { count: names.length - 15 })}` : ''),
+      })}
+    >
+      <MxAvatar mxc={first.avatarMxc} name={first.name} seed={first.userId} size={14} className="rounded-full" />
+      {readers.length > 1 && <span>+{readers.length - 1}</span>}
+    </span>
+  );
+}
 
 function CountBadge({ count }: { count: number }) {
   return (
