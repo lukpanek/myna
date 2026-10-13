@@ -1,6 +1,8 @@
 mod cookie_login;
 mod media;
 mod notifications;
+#[cfg(desktop)]
+mod tray;
 mod window;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -12,6 +14,14 @@ pub fn run() {
   let builder = builder.plugin(tauri_plugin_single_instance::init(|app, _argv, _cwd| {
     window::show_main(app);
   }));
+
+  #[cfg(desktop)]
+  let builder = builder
+    .plugin(tauri_plugin_autostart::init(
+      tauri_plugin_autostart::MacosLauncher::LaunchAgent,
+      Some(vec![tray::AUTOSTART_ARG]),
+    ))
+    .manage(tray::TrayState::default());
 
   #[cfg(desktop)]
   let builder = builder.plugin(
@@ -39,6 +49,8 @@ pub fn run() {
       cookie_login::open_cookie_login,
       notifications::notification_permission,
       notifications::native_notify,
+      #[cfg(desktop)]
+      tray::update_tray,
     ])
     .on_window_event(window::on_window_event)
     .setup(|app| {
@@ -50,6 +62,8 @@ pub fn run() {
         )?;
       }
       media::init(app.handle());
+      #[cfg(desktop)]
+      tray::hide_main_on_autostart(app.handle());
       Ok(())
     })
     .build(tauri::generate_context!())

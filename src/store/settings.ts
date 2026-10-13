@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+import { DEFAULT_NOTIFICATION_SOUND, type NotificationSoundId } from '@/features/notifications/sounds';
 import type { Locale } from '@/i18n/define';
 import type { NotifyLevel } from '@/matrix/push-rules';
 
@@ -27,7 +28,8 @@ export interface Settings {
   theme: Theme;
   /** Room list: compact rows (Slack) or two-line rows with message preview. */
   density: ListDensity;
-  fontSize: number;
+  /** Message and list text size in % of BASE_FONT_SIZE. */
+  fontScale: number;
   interfaceScale: number;
   groupRooms: boolean;
   showRoomIcons: boolean;
@@ -37,6 +39,10 @@ export interface Settings {
   showSystemEvents: boolean;
   showReadReceipts: boolean;
   showMediaPreviews: boolean;
+  /** Cards and players (YouTube, Spotify…) under messages with links. */
+  showLinkPreviews: boolean;
+  /** Menu bar / tray icon with the unread count; closing the window keeps the app running. */
+  trayIcon: boolean;
   /** Shift+Enter sends instead of Enter. */
   sendWithShift: boolean;
   recentEmoji: string[];
@@ -46,6 +52,10 @@ export interface Settings {
   notifications: {
     enabled: boolean;
     sound: boolean;
+    /** Which sound plays; custom ones are synthesized in the app, `system` = OS default. */
+    soundId: NotificationSoundId;
+    /** Volume of custom sounds, 0–100. */
+    soundVolume: number;
     showContent: boolean;
     /** Epoch ms until which notifications are paused (Slack "Pause notifications"). */
     pausedUntil: number | null;
@@ -73,6 +83,20 @@ interface SettingsActions {
   setNetworkName: (networkId: string, name: string | null) => void;
 }
 
+/** Text size (px) at 100 % font scale. */
+export const BASE_FONT_SIZE = 15;
+export const FONT_SCALES = [85, 90, 100, 110, 125, 150, 175];
+
+export function fontSizePx(fontScale: number): number {
+  return (BASE_FONT_SIZE * fontScale) / 100;
+}
+
+/** Nearest offered scale to an old pixel size (settings version 1 stored px). */
+function scaleFromPx(px: number): number {
+  const wanted = (px / BASE_FONT_SIZE) * 100;
+  return FONT_SCALES.reduce((best, s) => (Math.abs(s - wanted) < Math.abs(best - wanted) ? s : best), 100);
+}
+
 export const DEFAULT_RECENT_EMOJI = ['👍', '❤️', '😂', '🙏', '👀', '🎉'];
 
 export const useSettings = create<Settings & SettingsActions>()(
@@ -81,7 +105,7 @@ export const useSettings = create<Settings & SettingsActions>()(
       language: 'system',
       theme: 'system',
       density: 'comfortable',
-      fontSize: 15,
+      fontScale: 100,
       interfaceScale: 100,
       groupRooms: true,
       showRoomIcons: true,
@@ -91,12 +115,16 @@ export const useSettings = create<Settings & SettingsActions>()(
       showSystemEvents: false,
       showReadReceipts: true,
       showMediaPreviews: true,
+      showLinkPreviews: true,
+      trayIcon: true,
       sendWithShift: false,
       recentEmoji: DEFAULT_RECENT_EMOJI,
       markBridgeHistoryRead: true,
       notifications: {
         enabled: true,
         sound: true,
+        soundId: DEFAULT_NOTIFICATION_SOUND,
+        soundVolume: 70,
         showContent: true,
         pausedUntil: null,
         networks: {},
@@ -140,6 +168,23 @@ export const useSettings = create<Settings & SettingsActions>()(
           return { networkNames };
         }),
     }),
-    { name: 'myna.settings', version: 1 },
+    {
+      name: 'myna.settings',
+      version: 2,
+      // v2: font size in % instead of px.
+      migrate: (persisted, version) => {
+        const state = (persisted ?? {}) as Record<string, unknown>;
+        if (version < 2 && typeof state.fontSize === 'number') {
+          state.fontScale = scaleFromPx(state.fontSize);
+          delete state.fontSize;
+        }
+        return state as unknown as Settings & SettingsActions;
+      },
+      // Nested groups are merged so fields added later get their defaults.
+      merge: (persisted, current) => {
+        const p = (persisted ?? {}) as Partial<Settings>;
+        return { ...current, ...p, notifications: { ...current.notifications, ...p.notifications } };
+      },
+    },
   ),
 );

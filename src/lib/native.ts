@@ -2,9 +2,12 @@ import { invoke } from '@tauri-apps/api/core';
 import { getCurrentWindow } from '@tauri-apps/api/window';
 import type { MatrixClient } from 'matrix-js-sdk';
 import { useEffect } from 'react';
+import { isCustomSound, playNotificationSound } from '@/features/notifications/sounds';
 import { unreadTotals } from '@/features/shell/room-filters';
+import { t } from '@/i18n';
 import { useMatrixClient } from '@/matrix/context';
 import { useRooms } from '@/matrix/rooms-store';
+import { useSettings } from '@/store/settings';
 import { useUi } from '@/store/ui';
 import { isMac, isTauri, isWindows } from './platform';
 
@@ -62,17 +65,25 @@ function onLinkClick(e: MouseEvent) {
 
 let badgeTimer: ReturnType<typeof setTimeout> | null = null;
 let lastBadge: number | undefined | null = null;
+let lastTray = '';
+let trayCount = 0;
+
+function unreadCount(): number {
+  const rooms = Object.values(useRooms.getState().rooms).filter((r) => !r.isBotRoom);
+  return unreadTotals(rooms).highlight;
+}
 
 function scheduleBadgeUpdate() {
   if (badgeTimer) return;
   badgeTimer = setTimeout(() => {
     badgeTimer = null;
-    const rooms = Object.values(useRooms.getState().rooms).filter((r) => !r.isBotRoom);
-    const count = unreadTotals(rooms).highlight || undefined;
-    if (count === lastBadge) return;
-    lastBadge = count;
+    const count = unreadCount();
+    syncTray(count);
+    // The dock badge is macOS/Linux only; Windows would need an overlay icon.
+    if (isWindows || (count || undefined) === lastBadge) return;
+    lastBadge = count || undefined;
     getCurrentWindow()
-      .setBadgeCount(count)
+      .setBadgeCount(lastBadge)
       .catch(() => {});
   }, BADGE_THROTTLE);
 }
@@ -81,9 +92,50 @@ function clearBadge() {
   if (badgeTimer) clearTimeout(badgeTimer);
   badgeTimer = null;
   lastBadge = null;
+  syncTray(0);
+  if (isWindows) return;
   getCurrentWindow()
     .setBadgeCount(undefined)
     .catch(() => {});
+}
+
+/** Pushes the tray icon state (on/off, labels, count) to the native side when it changed. */
+function syncTray(count = trayCount) {
+  trayCount = count;
+  const update = {
+    enabled: useSettings.getState().trayIcon,
+    openLabel: t('app.trayOpen'),
+    quitLabel: t('app.trayQuit'),
+    tooltip: count > 0 ? t('app.trayTooltipUnread', { count }) : 'Myna',
+    count,
+  };
+  const key = JSON.stringify(update);
+  if (key === lastTray) return;
+  lastTray = key;
+  invoke('update_tray', { update }).catch((err) => console.warn('Tray update failed', err));
+}
+
+/** Keeps the tray icon in line with settings (on/off, menu language); call once at the app root. */
+export function useTraySync(): void {
+  useEffect(() => {
+    if (!isTauri) return;
+    syncTray();
+    return useSettings.subscribe((s, prev) => {
+      if (s.trayIcon !== prev.trayIcon || s.language !== prev.language) syncTray();
+    });
+  }, []);
+}
+
+/** Launch at login (OS login item). Desktop app only. */
+export async function getAutostart(): Promise<boolean> {
+  if (!isTauri) return false;
+  const { isEnabled } = await import('@tauri-apps/plugin-autostart');
+  return isEnabled();
+}
+
+export async function setAutostart(enabled: boolean): Promise<void> {
+  const { enable, disable } = await import('@tauri-apps/plugin-autostart');
+  await (enabled ? enable() : disable());
 }
 
 /** Call once inside the logged-in app shell. */
@@ -136,8 +188,7 @@ export function useNativeIntegration(): void {
   }, []);
 
   useEffect(() => {
-    // The dock badge is macOS/Linux only; Windows would need an overlay icon.
-    if (!isTauri || isWindows) return;
+    if (!isTauri) return;
     scheduleBadgeUpdate();
     const unsubscribe = useRooms.subscribe((s, prev) => {
       if (s.rooms !== prev.rooms) scheduleBadgeUpdate();
@@ -201,21 +252,26 @@ export async function showNotification(o: {
   sound: boolean;
 }): Promise<void> {
   if (!(await requestNotificationPermission())) return;
+  // Custom sounds play in the app; the OS notification itself stays silent.
+  const { soundId, soundVolume } = useSettings.getState().notifications;
+  const custom = o.sound && isCustomSound(soundId);
+  const systemSound = o.sound && !custom;
+  if (custom) void playNotificationSound(soundId, soundVolume).catch(() => undefined);
   if (isTauri) {
     const sent = await invoke<boolean>('native_notify', {
       title: o.title,
       body: o.body,
-      sound: o.sound,
+      sound: systemSound,
       group: o.roomId,
     }).catch(() => false);
     if (!sent) {
       const { sendNotification } = await import('@tauri-apps/plugin-notification');
-      sendNotification({ title: o.title, body: o.body, sound: o.sound ? soundName() : undefined });
+      sendNotification({ title: o.title, body: o.body, sound: systemSound ? soundName() : undefined });
     }
     lastNotification = isWindowFocused() ? null : { roomId: o.roomId, eventId: o.eventId, at: Date.now() };
     return;
   }
-  const n = new Notification(o.title, { body: o.body, silent: !o.sound, tag: o.roomId });
+  const n = new Notification(o.title, { body: o.body, silent: !systemSound, tag: o.roomId });
   n.onclick = () => {
     window.focus();
     useUi.getState().openRoom(o.roomId, { eventId: o.eventId });

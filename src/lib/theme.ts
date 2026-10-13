@@ -1,5 +1,5 @@
 import { useEffect, useSyncExternalStore } from 'react';
-import { useSettings } from '@/store/settings';
+import { fontSizePx, useSettings } from '@/store/settings';
 
 const query = typeof window === 'undefined' ? null : window.matchMedia('(prefers-color-scheme: dark)');
 
@@ -18,7 +18,7 @@ export function useResolvedTheme(): 'light' | 'dark' {
 /** Applies theme class and font size to <html>. Mount once at the root. */
 export function useApplyTheme(): void {
   const resolved = useResolvedTheme();
-  const fontSize = useSettings((s) => s.fontSize);
+  const fontScale = useSettings((s) => s.fontScale);
   const interfaceScale = useSettings((s) => s.interfaceScale);
   const highContrast = useSettings((s) => s.highContrast);
   const accessibleNames = useSettings((s) => s.accessibleNames);
@@ -28,8 +28,8 @@ export function useApplyTheme(): void {
     document.documentElement.style.colorScheme = resolved;
   }, [resolved]);
   useEffect(() => {
-    document.documentElement.style.setProperty('--app-font-size', `${fontSize}px`);
-  }, [fontSize]);
+    document.documentElement.style.setProperty('--app-font-size', `${fontSizePx(fontScale)}px`);
+  }, [fontScale]);
   useEffect(() => {
     const root = document.documentElement;
     root.style.setProperty('--interface-scale', String(interfaceScale / 100));

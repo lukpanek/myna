@@ -11,7 +11,12 @@ network. Beeper-like account handling, Slack-like UX. UI languages: Czech, Slova
 - **React 19 + TypeScript + Vite**, **Tailwind v4 + shadcn/ui** (new-york, neutral).
 - **matrix-js-sdk** with Rust crypto (WASM) and IndexedDB sync store.
 - **zustand** for app state, **TipTap** for the rich text composer.
-- Fonts: system stack (SF Pro on macOS). No web fonts.
+- Fonts: Inter (body, `font-sans`), Inter SemiBold 600 (headings h1–h6 + dialog/sheet titles, `font-heading`), Noto Sans Mono (`font-mono`); bundled via @fontsource — never loaded from Google at runtime.
+- Scrollbars: native vertical bars hidden; one floating overlay thumb (draggable, takes no space) shows on hover or while scrolling
+  over the scroller under the pointer (`src/lib/scrollbars.ts`, `.overlay-scrollbar` in `index.css`). Horizontal bars stay native, thin.
+  Scrollers opt in via `configureScrollbar` (label, fixed thumb); the timeline uses a fixed-size thumb and shows
+  the day in view while scrolling/dragging. Content size changes never jump the thumb: the gap decays over ~320 ms while scrolling continues; dragging is absolute (thumb stays under the pointer;
+  holding it at the top keeps loading history).
 
 ## Layout
 
@@ -64,7 +69,7 @@ network. Beeper-like account handling, Slack-like UX. UI languages: Czech, Slova
   (`details | thread | user`; a profile remembers the panel it was opened from), settings dialog, ⌘K, `focusEventId` (jump to event).
 - `settings.ts` — `useSettings` (persisted): theme, density, font size,
   system events, read receipts, `sendWithShift`, recent emoji, notifications
-  (enabled, sound, showContent, pausedUntil, per-network defaults), bridge URLs.
+  (enabled, sound, soundId, soundVolume, showContent, pausedUntil, per-network defaults), bridge URLs.
 
 ## Module contracts
 
@@ -77,18 +82,26 @@ network. Beeper-like account handling, Slack-like UX. UI languages: Czech, Slova
 | `features/emoji/emoji-picker.tsx` | `EmojiPicker({ onPick })` | composer |
 | `features/details/details-panel.tsx` | `DetailsPanel({ roomId })` | settings |
 | `features/settings/settings-dialog.tsx` | `SettingsDialog({ onLogout })` | settings |
+| `features/settings/shortcuts-dialog.tsx` | `ShortcutsDialog()` (⌘/, `useUi.shortcutsOpen`) | settings |
 | `features/notifications/use-notifications.ts` | `useDesktopNotifications()` | settings |
+| `features/notifications/sounds.ts` | `NOTIFICATION_SOUNDS`, `playNotificationSound(id, volume)` (Web Audio synth; OS notification stays silent) | settings |
 | `features/crypto/crypto-prompts.tsx` | `CryptoPrompts()` | settings |
 | `features/bridges/bridges-page.tsx` | `BridgesPage()` | bridges |
 | `features/new-chat/new-chat-dialog.tsx` | `NewChatDialog({ open, onOpenChange })` | bridges |
 | `features/later/reminders.ts` | `useReminders`, `attachReminders(client)`; account data `cz.myna.reminders` | later |
 | `features/later/scheduled.ts` | `useScheduled` (localStorage), `attachScheduledSender(client)` | later |
+| `features/search/search.ts` | `searchServer`, `searchLoaded`, `historyScanner(client, roomId)`, `mergeHits` | search |
+| `features/search/search-panel.tsx` | `SearchPanel({ scope, initialQuery })` (right panel `search`) | search |
+| `features/room/link-preview.tsx` | `LinkPreviews({ content, ts })`, `embedFor(url)` | timeline |
+| `features/details/room-settings-dialog.tsx` | `RoomSettingsDialog`, `InviteDialog`, `roomPermissions` | settings |
 | `lib/native.ts` | native integration (below) | native |
 
 `lib/native.ts`:
 
 ```ts
-useNativeIntegration(): void            // media session, dock badge, focus tracking
+useNativeIntegration(): void            // media session, dock badge + tray count, focus tracking
+useTraySync(): void                     // tray icon on/off + menu labels (app root)
+getAutostart(): Promise<boolean>; setAutostart(enabled: boolean): Promise<void>
 showNotification(o: { title: string; body: string; roomId: string; eventId?: string; sound: boolean }): Promise<void>
 isWindowFocused(): boolean
 openExternal(url: string): Promise<void>
@@ -103,6 +116,8 @@ cookieLogin(o: { url: string; userAgent?: string; cookies: { name: string; domai
   dividers ("Dnes", "Včera", "pondělí 6. října"). Red "Nové" line at the read
   marker. Hover toolbar: 3 recent emoji, add reaction, reply, thread, ⋯ menu.
 - Reactions are pills under the message; own reaction outlined in primary.
+- Primary colour matches the logo blue (`#2B59C3`, `oklch(0.5 0.17 264)`). Login offers preset
+  homeservers (matrix.org, mozilla.org) in an editable combobox, probes login flows and shows SSO only when offered.
 - Replies show a one-line quote above the message; click jumps to the original.
 - Images inline (max ~360px), blurhash/placeholder sized from `info.w/h` so the
   timeline does not jump. Click opens a lightbox. Video: poster + play.
@@ -114,4 +129,16 @@ cookieLogin(o: { url: string; userAgent?: string; cookies: { name: string; domai
 - Every user-facing string goes through `t()` (`src/i18n`); catalogs per namespace in
   `src/i18n/messages/` with cs (source of truth) / sk / en — add new strings in all three.
   Errors are toasts with a concrete message.
+- Search (⌘F chat, ⌘⇧F all, or "Hledat …" in ⌘K): server `/search` covers unencrypted rooms;
+  encrypted ones are matched locally (loaded events + a `/messages` history scan inside one chat).
+  Matching ignores case and diacritics.
+- Link previews: bridge `com.beeper.linkpreviews` first, else the homeserver preview API. YouTube/
+  Vimeo are click-to-play iframes, Spotify/Apple Music load directly; the iframes are sandboxed
+  without top navigation and their hosts are allowed in `window.rs` (`EMBED_HOSTS`).
+- Tray icon (`tray.rs`, setting `trayIcon`): unread count as the macOS menu bar title; with it on,
+  closing the window keeps the app running on Windows/Linux too. Launch at login starts hidden.
+- Settings tabs: Obecné (language, sending, launch at login, tray, about) · Vzhled (theme, chat
+  list, scaling) · Chaty (what shows in a conversation, bridge history) · Notifikace · Účet a
+  zabezpečení (profile, encryption, sessions, logout) · Přístupnost. A setting goes where the user
+  would look for its effect, not where it is implemented.
 - Keep it light: virtualized lists, `content-visibility` on messages, no heavy deps.

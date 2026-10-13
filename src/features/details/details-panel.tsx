@@ -8,7 +8,9 @@ import {
   LogOut,
   Mail,
   MailOpen,
+  Pencil,
   Star,
+  UserPlus,
   X,
 } from 'lucide-react';
 import { RoomStateEvent } from 'matrix-js-sdk';
@@ -44,6 +46,7 @@ import { leaveRoom, markRoomRead, markRoomUnread, toggleRoomTag } from '@/matrix
 import { useRooms } from '@/matrix/rooms-store';
 import { useUi } from '@/store/ui';
 import { MembersList } from './members-list';
+import { InviteDialog, RoomSettingsDialog, roomPermissions } from './room-settings-dialog';
 import { FileList, MediaGrid } from './room-media';
 
 const NOTIFY_LEVELS: NotifyLevel[] = ['default', 'all', 'mentions', 'mute'];
@@ -75,6 +78,8 @@ export function DetailsPanel({ roomId }: { roomId: string }) {
   const [scrollEl, setScrollEl] = useState<HTMLDivElement | null>(null);
   const [tab, setTab] = useState('members');
   const [confirmLeave, setConfirmLeave] = useState(false);
+  const [editOpen, setEditOpen] = useState(false);
+  const [inviteOpen, setInviteOpen] = useState(false);
   useRerenderOn(room?.currentState, RoomStateEvent.Update);
 
   const header = (
@@ -126,6 +131,11 @@ export function DetailsPanel({ roomId }: { roomId: string }) {
   };
 
   const muted = summary.notifyLevel === 'mute';
+  const can = roomPermissions(client, room);
+  // DM names and pictures come from the other person, not from room state.
+  const canEdit = !summary.isDm && (can.name || can.topic || can.avatar);
+  // Bridged portals mirror the remote group; inviting Matrix users there makes no sense.
+  const canInvite = !summary.isDm && !bridge && can.invite;
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
@@ -151,6 +161,22 @@ export function DetailsPanel({ roomId }: { roomId: string }) {
           )}
           {topic && (
             <p className="mt-2 line-clamp-5 text-[13px] whitespace-pre-wrap text-muted-foreground select-text">{topic}</p>
+          )}
+          {(canEdit || canInvite) && (
+            <div className="mt-3 flex gap-2">
+              {canEdit && (
+                <Button size="sm" variant="outline" onClick={() => setEditOpen(true)}>
+                  <Pencil />
+                  {t('details.edit')}
+                </Button>
+              )}
+              {canInvite && (
+                <Button size="sm" variant="outline" onClick={() => setInviteOpen(true)}>
+                  <UserPlus />
+                  {t('details.invitePeople')}
+                </Button>
+              )}
+            </div>
           )}
         </div>
 
@@ -283,6 +309,9 @@ export function DetailsPanel({ roomId }: { roomId: string }) {
           </TabsContent>
         </Tabs>
       </div>
+
+      {canEdit && <RoomSettingsDialog room={room} summary={summary} open={editOpen} onOpenChange={setEditOpen} />}
+      {canInvite && <InviteDialog room={room} open={inviteOpen} onOpenChange={setInviteOpen} />}
 
       <Dialog open={confirmLeave} onOpenChange={setConfirmLeave}>
         <DialogContent className="sm:max-w-[400px]">

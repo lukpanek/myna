@@ -15,6 +15,7 @@ import matrix from './messages/matrix';
 import newChat from './messages/newChat';
 import notifications from './messages/notifications';
 import room from './messages/room';
+import search from './messages/search';
 import settings from './messages/settings';
 import shell from './messages/shell';
 import status from './messages/status';
@@ -32,6 +33,7 @@ const catalogs = {
   notifications,
   matrix,
   room,
+  search,
   composer,
   emoji,
   crypto,

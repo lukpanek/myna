@@ -2,6 +2,7 @@ import { ResizeHandle } from '@/components/resize-handle';
 import { DetailsPanel } from '@/features/details/details-panel';
 import { UserPanel } from '@/features/details/user-panel';
 import { ThreadPanel } from '@/features/room/thread-panel';
+import { SearchPanel } from '@/features/search/search-panel';
 import { t } from '@/i18n';
 import { PANEL_WIDTHS, useUi } from '@/store/ui';
 
@@ -11,7 +12,8 @@ export function RightPanel() {
   const width = useUi((s) => s.rightPanelWidth);
   const setWidth = useUi((s) => s.setRightPanelWidth);
   const setPanel = useUi((s) => s.setRightPanel);
-  if (!panel || !roomId) return null;
+  // Searching all chats works without an open chat; every other panel belongs to one.
+  if (!panel || (!roomId && panel.kind !== 'search')) return null;
   return (
     <aside style={{ width }} className="relative flex shrink-0 flex-col border-l bg-background">
       <ResizeHandle
@@ -23,7 +25,9 @@ export function RightPanel() {
         onReset={() => setWidth(PANEL_WIDTHS.rightPanel.default)}
         label={t('shell.resizePanel')}
       />
-      {panel.kind === 'details' ? (
+      {panel.kind === 'search' ? (
+        <SearchPanel scope={panel.scope} initialQuery={panel.query} />
+      ) : !roomId ? null : panel.kind === 'details' ? (
         <DetailsPanel roomId={roomId} />
       ) : panel.kind === 'user' ? (
         <UserPanel

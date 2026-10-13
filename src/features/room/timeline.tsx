@@ -18,6 +18,8 @@ import { toast } from 'sonner';
 import { t } from '@/i18n';
 import { scrollBehavior } from '@/lib/motion';
 import { isWindowFocused } from '@/lib/native';
+import { configureScrollbar } from '@/lib/scrollbars';
+import { formatDayDivider } from '@/lib/time';
 import { useEmitterEvent, useMatrixClient } from '@/matrix/context';
 import { markRoomRead } from '@/matrix/room-actions';
 import { useSettings } from '@/store/settings';
@@ -517,6 +519,20 @@ export function Timeline({ room }: { room: Room }) {
     }),
     [room, jumpToEvent],
   );
+
+  // Overlay scrollbar: date of the topmost message in view beside the thumb; fixed thumb size
+  // because the history length is unknown and grows with every page.
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    return configureScrollbar(el, {
+      fixedThumb: true,
+      label: () => {
+        const ts = Number(firstVisibleRow(el)?.dataset.ts);
+        return ts ? formatDayDivider(ts) : null;
+      },
+    });
+  }, []);
 
   const findEvent = useCallback(
     (id: string) => snapshotRef.current.events.find((e) => e.getId() === id),

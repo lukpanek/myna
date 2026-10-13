@@ -1,27 +1,23 @@
-import { Accessibility, Bell, Info, Keyboard, MessageSquare, Palette, ShieldCheck, UserRound } from 'lucide-react';
+import { Accessibility, Bell, MessageSquare, Palette, Settings2, UserRound } from 'lucide-react';
 import type { ComponentType } from 'react';
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { type MessageKey, t } from '@/i18n';
 import { cn } from '@/lib/utils';
 import { useUi } from '@/store/ui';
-import { AboutTab } from './about-tab';
 import { AccountTab } from './account-tab';
 import { AccessibilityTab } from './accessibility-tab';
 import { AppearanceTab } from './appearance-tab';
-import { MessagesTab } from './messages-tab';
+import { ChatsTab } from './chats-tab';
+import { GeneralTab, useAppVersion } from './general-tab';
 import { NotificationsTab } from './notifications-tab';
-import { SecurityTab } from './security-tab';
-import { ShortcutsTab } from './shortcuts-tab';
 
 const TABS: { key: string; label: MessageKey; icon: ComponentType<{ className?: string }> }[] = [
-  { key: 'account', label: 'settings.tabAccount', icon: UserRound },
+  { key: 'general', label: 'settings.tabGeneral', icon: Settings2 },
   { key: 'appearance', label: 'settings.tabAppearance', icon: Palette },
-  { key: 'accessibility', label: 'settings.tabAccessibility', icon: Accessibility },
+  { key: 'chats', label: 'settings.tabChats', icon: MessageSquare },
   { key: 'notifications', label: 'settings.tabNotifications', icon: Bell },
-  { key: 'messages', label: 'settings.tabMessages', icon: MessageSquare },
-  { key: 'security', label: 'settings.tabSecurity', icon: ShieldCheck },
-  { key: 'shortcuts', label: 'settings.tabShortcuts', icon: Keyboard },
-  { key: 'about', label: 'settings.tabAbout', icon: Info },
+  { key: 'account', label: 'settings.tabAccountSecurity', icon: UserRound },
+  { key: 'accessibility', label: 'settings.tabAccessibility', icon: Accessibility },
 ];
 
 /** Slack-style preferences: tab list on the left, scrollable content on the right. */
@@ -30,7 +26,8 @@ export function SettingsDialog({ onLogout }: { onLogout: () => void }) {
   const storedTab = useUi((s) => s.settingsTab);
   const openSettings = useUi((s) => s.openSettings);
   const closeSettings = useUi((s) => s.closeSettings);
-  const tab = TABS.some((x) => x.key === storedTab) ? storedTab : 'appearance';
+  const tab = TABS.some((x) => x.key === storedTab) ? storedTab : 'general';
+  const version = useAppVersion();
 
   return (
     <Dialog open={open} onOpenChange={(next) => !next && closeSettings()}>
@@ -57,6 +54,13 @@ export function SettingsDialog({ onLogout }: { onLogout: () => void }) {
               {t(label)}
             </button>
           ))}
+          <button
+            type="button"
+            onClick={() => openSettings('general')}
+            className="mt-auto px-2 pt-3 text-left text-[11px] text-muted-foreground hover:text-foreground"
+          >
+            Myna {version}
+          </button>
         </nav>
         <div key={tab} className="min-w-0 flex-1 overflow-y-auto px-5 pt-6 pb-8">
           {tab === 'account' && (
@@ -67,13 +71,11 @@ export function SettingsDialog({ onLogout }: { onLogout: () => void }) {
               }}
             />
           )}
+          {tab === 'general' && <GeneralTab />}
           {tab === 'appearance' && <AppearanceTab />}
-          {tab === 'accessibility' && <AccessibilityTab />}
+          {tab === 'chats' && <ChatsTab />}
           {tab === 'notifications' && <NotificationsTab />}
-          {tab === 'messages' && <MessagesTab />}
-          {tab === 'security' && <SecurityTab />}
-          {tab === 'shortcuts' && <ShortcutsTab />}
-          {tab === 'about' && <AboutTab />}
+          {tab === 'accessibility' && <AccessibilityTab />}
         </div>
       </DialogContent>
     </Dialog>

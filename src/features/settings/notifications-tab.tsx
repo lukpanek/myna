@@ -1,4 +1,4 @@
-import { BellOff, Plus, X } from 'lucide-react';
+import { BellOff, Play, Plus, X } from 'lucide-react';
 import { ClientEvent, EventType, type MatrixEvent } from 'matrix-js-sdk';
 import { type FormEvent, useState } from 'react';
 import { toast } from 'sonner';
@@ -7,6 +7,12 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ensureNotificationPermission } from '@/features/notifications/permission';
+import {
+  isCustomSound,
+  NOTIFICATION_SOUNDS,
+  type NotificationSoundId,
+  playNotificationSound,
+} from '@/features/notifications/sounds';
 import {
   addKeyword,
   type DmDefault,
@@ -51,8 +57,6 @@ function usePushRulesVersion(onChange?: () => void): void {
 export function NotificationsTab() {
   const n = useSettings((s) => s.notifications);
   const setNotifications = useSettings((s) => s.setNotifications);
-  const markBridgeHistoryRead = useSettings((s) => s.markBridgeHistoryRead);
-  const setSettings = useSettings((s) => s.set);
   const paused = !!n.pausedUntil && n.pausedUntil > Date.now();
 
   const toggleEnabled = async (enabled: boolean) => {
@@ -79,18 +83,13 @@ export function NotificationsTab() {
           disabled={!n.enabled}
           onCheckedChange={(sound) => setNotifications({ sound })}
         />
+        <SoundPicker disabled={!n.enabled || !n.sound} />
         <SwitchRow
           label={t('settings.showContent')}
           description={t('settings.showContentDescription')}
           checked={n.showContent}
           disabled={!n.enabled}
           onCheckedChange={(showContent) => setNotifications({ showContent })}
-        />
-        <SwitchRow
-          label={t('settings.markBridgeHistoryRead')}
-          description={t('settings.markBridgeHistoryReadDescription')}
-          checked={markBridgeHistoryRead}
-          onCheckedChange={(value) => setSettings({ markBridgeHistoryRead: value })}
         />
       </Section>
 
@@ -128,6 +127,81 @@ export function NotificationsTab() {
       <Keywords />
       <NetworkDefaults />
     </>
+  );
+}
+
+function soundLabel(id: NotificationSoundId): string {
+  return t(`settings.sound_${id}`);
+}
+
+function soundDescription(id: NotificationSoundId): string {
+  return t(`settings.soundDescription_${id}`);
+}
+
+function SoundPicker({ disabled }: { disabled: boolean }) {
+  const soundId = useSettings((s) => s.notifications.soundId);
+  const volume = useSettings((s) => s.notifications.soundVolume);
+  const setNotifications = useSettings((s) => s.setNotifications);
+  const custom = isCustomSound(soundId);
+
+  const preview = (id: NotificationSoundId, vol = volume) => {
+    if (isCustomSound(id)) void playNotificationSound(id, vol, { preview: true });
+  };
+
+  return (
+    <div className={disabled ? 'pointer-events-none opacity-60' : undefined} aria-disabled={disabled}>
+      <Row label={t('settings.notificationSound')} description={soundDescription(soundId)}>
+        <Select
+          value={soundId}
+          disabled={disabled}
+          onValueChange={(v) => {
+            const id = v as NotificationSoundId;
+            setNotifications({ soundId: id });
+            preview(id);
+          }}
+        >
+          <SelectTrigger size="sm" className="w-44" aria-label={t('settings.notificationSound')}>
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {NOTIFICATION_SOUNDS.map((id) => (
+              <SelectItem key={id} value={id}>
+                {soundLabel(id)}
+              </SelectItem>
+            ))}
+            <SelectItem value="system">{soundLabel('system')}</SelectItem>
+          </SelectContent>
+        </Select>
+        <Button
+          size="icon-sm"
+          variant="outline"
+          disabled={disabled || !custom}
+          onClick={() => preview(soundId)}
+          aria-label={t('settings.playSound')}
+          title={t('settings.playSound')}
+        >
+          <Play />
+        </Button>
+      </Row>
+      {custom && (
+        <Row label={t('settings.soundVolume')}>
+          <input
+            type="range"
+            min={5}
+            max={100}
+            step={5}
+            value={volume}
+            disabled={disabled}
+            aria-label={t('settings.soundVolume')}
+            onChange={(e) => setNotifications({ soundVolume: Number(e.target.value) })}
+            onPointerUp={(e) => preview(soundId, Number(e.currentTarget.value))}
+            onKeyUp={(e) => preview(soundId, Number(e.currentTarget.value))}
+            className="w-44 accent-primary"
+          />
+          <span className="w-9 text-right text-[13px] text-muted-foreground tabular-nums">{volume} %</span>
+        </Row>
+      )}
+    </div>
   );
 }
 

@@ -78,3 +78,11 @@ export function TabTitle({ children }: { children: ReactNode }) {
 export function errorMessage(err: unknown): string {
   return err instanceof Error ? err.message : String(err);
 }
+
+export function Kbd({ children }: { children: ReactNode }) {
+  return (
+    <kbd className="inline-flex h-5 min-w-5 items-center justify-center rounded border bg-muted px-1.5 font-sans text-[11px] font-medium text-foreground/80">
+      {children}
+    </kbd>
+  );
+}

@@ -3,10 +3,11 @@
 
 @custom-variant dark (&:is(.dark *));
 
-/* System fonts: native feel, zero loading cost. */
+/* Bundled fonts (no network): Inter for text and headings, Noto Sans Mono for code. */
 @theme inline {
-  --font-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI Variable', 'Segoe UI', system-ui, sans-serif;
-  --font-mono: ui-monospace, 'SF Mono', 'Cascadia Code', Menlo, monospace;
+  --font-sans: 'Inter Variable', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+  --font-heading: 'Inter Variable', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+  --font-mono: 'Noto Sans Mono Variable', ui-monospace, 'SF Mono', 'Cascadia Code', Menlo, monospace;
 
   --color-background: var(--background);
   --color-foreground: var(--foreground);
@@ -55,7 +56,7 @@
   --popover: oklch(1 0 0);
   --popover-foreground: oklch(0.2 0.005 285);
   /* One accent, used sparingly: selection, own reactions, links, unread line. */
-  --primary: oklch(0.5 0.13 250);
+  --primary: oklch(0.5 0.17 264);
   --primary-foreground: oklch(0.985 0 0);
   --secondary: oklch(0.965 0.002 285);
   --secondary-foreground: oklch(0.25 0.005 285);
@@ -66,7 +67,7 @@
   --destructive: oklch(0.577 0.245 27.325);
   --border: oklch(0.91 0.004 285);
   --input: oklch(0.88 0.004 285);
-  --ring: oklch(0.5 0.13 250);
+  --ring: oklch(0.5 0.17 264);
   --mention: oklch(0.6 0.2 25);
   --mention-foreground: oklch(0.99 0 0);
   --highlight: oklch(0.97 0.05 90);
@@ -75,12 +76,12 @@
   --rail-foreground: oklch(0.3 0.005 285);
   --sidebar: oklch(0.975 0.002 285);
   --sidebar-foreground: oklch(0.3 0.005 285);
-  --sidebar-primary: oklch(0.5 0.13 250);
+  --sidebar-primary: oklch(0.5 0.17 264);
   --sidebar-primary-foreground: oklch(0.985 0 0);
   --sidebar-accent: oklch(0.93 0.004 285);
   --sidebar-accent-foreground: oklch(0.2 0.005 285);
   --sidebar-border: oklch(0.91 0.004 285);
-  --sidebar-ring: oklch(0.5 0.13 250);
+  --sidebar-ring: oklch(0.5 0.17 264);
 }
 
 .dark {
@@ -90,8 +91,8 @@
   --card-foreground: oklch(0.93 0.003 285);
   --popover: oklch(0.24 0.005 285);
   --popover-foreground: oklch(0.93 0.003 285);
-  --primary: oklch(0.68 0.13 250);
-  --primary-foreground: oklch(0.16 0.01 250);
+  --primary: oklch(0.7 0.14 264);
+  --primary-foreground: oklch(0.16 0.02 264);
   --secondary: oklch(0.27 0.005 285);
   --secondary-foreground: oklch(0.93 0.003 285);
   --muted: oklch(0.27 0.005 285);
@@ -101,7 +102,7 @@
   --destructive: oklch(0.65 0.2 25);
   --border: oklch(1 0 0 / 9%);
   --input: oklch(1 0 0 / 14%);
-  --ring: oklch(0.68 0.13 250);
+  --ring: oklch(0.7 0.14 264);
   --mention: oklch(0.62 0.2 25);
   --mention-foreground: oklch(0.99 0 0);
   --highlight: oklch(0.32 0.05 90);
@@ -110,12 +111,12 @@
   --rail-foreground: oklch(0.85 0.003 285);
   --sidebar: oklch(0.175 0.004 285);
   --sidebar-foreground: oklch(0.8 0.005 285);
-  --sidebar-primary: oklch(0.68 0.13 250);
-  --sidebar-primary-foreground: oklch(0.16 0.01 250);
+  --sidebar-primary: oklch(0.7 0.14 264);
+  --sidebar-primary-foreground: oklch(0.16 0.02 264);
   --sidebar-accent: oklch(0.25 0.005 285);
   --sidebar-accent-foreground: oklch(0.96 0.003 285);
   --sidebar-border: oklch(1 0 0 / 7%);
-  --sidebar-ring: oklch(0.68 0.13 250);
+  --sidebar-ring: oklch(0.7 0.14 264);
 }
 
 @layer base {
@@ -170,6 +171,100 @@
     -webkit-user-select: text;
     user-select: text;
   }
+}
+
+/* Headings: Inter SemiBold. Unlayered on purpose so it wins over font-semibold/font-bold utilities. */
+h1,
+h2,
+h3,
+h4,
+h5,
+h6,
+[data-slot='dialog-title'],
+[data-slot='sheet-title'] {
+  font-family: var(--font-heading);
+  font-weight: 600;
+}
+
+/* Scrollbars: native vertical bars are hidden (width 0) and replaced by the floating overlay
+   thumb from lib/scrollbars.ts. Horizontal bars (code blocks, tables) stay native but thin.
+   Don't set the standard scrollbar-width/scrollbar-color globally: Chromium (WebView2) then
+   ignores these pseudo-elements. */
+::-webkit-scrollbar {
+  width: 0;
+  height: 8px;
+  background: transparent;
+}
+::-webkit-scrollbar-track,
+::-webkit-scrollbar-corner {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  border: 2px solid transparent;
+  border-radius: 9999px;
+  background-color: color-mix(in oklch, var(--foreground) 22%, transparent);
+  background-clip: padding-box;
+}
+
+.overlay-scrollbar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 2147483647;
+  width: 10px;
+  border: 2px solid transparent;
+  border-radius: 9999px;
+  background-color: color-mix(in oklch, var(--foreground) 24%, transparent);
+  background-clip: padding-box;
+  opacity: 0;
+  pointer-events: none;
+  transition:
+    opacity 200ms ease,
+    background-color 120ms ease,
+    border-width 120ms ease;
+}
+.overlay-scrollbar[data-visible='true'] {
+  opacity: 1;
+  pointer-events: auto;
+  transition-duration: 80ms, 120ms, 120ms;
+}
+.overlay-scrollbar:hover,
+.overlay-scrollbar[data-dragging='true'] {
+  border-width: 1px;
+  background-color: color-mix(in oklch, var(--foreground) 42%, transparent);
+}
+.high-contrast .overlay-scrollbar {
+  background-color: var(--muted-foreground);
+}
+/* Date pill beside the thumb (timeline). */
+.overlay-scrollbar-label {
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 2147483647;
+  padding: 3px 10px;
+  border: 1px solid var(--border);
+  border-radius: 9999px;
+  background: var(--popover);
+  color: var(--popover-foreground);
+  box-shadow: 0 2px 8px rgb(0 0 0 / 12%);
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 200ms ease;
+}
+.overlay-scrollbar-label[data-visible='true'] {
+  opacity: 1;
+  transition-duration: 80ms;
+}
+.overlay-scrollbar-label[data-dragging='true'] {
+  padding: 5px 12px;
+  font-size: 13px;
+  background: var(--primary);
+  border-color: var(--primary);
+  color: var(--primary-foreground);
 }
 
 /* Long timelines: let the browser skip layout for off-screen messages. */

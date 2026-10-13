@@ -10,6 +10,7 @@ import { NewChatDialog } from '@/features/new-chat/new-chat-dialog';
 import { useDesktopNotifications } from '@/features/notifications/use-notifications';
 import { RoomView } from '@/features/room/room-view';
 import { SettingsDialog } from '@/features/settings/settings-dialog';
+import { ShortcutsDialog } from '@/features/settings/shortcuts-dialog';
 import { t } from '@/i18n';
 import { useNativeIntegration } from '@/lib/native';
 import { isMac, modKey } from '@/lib/platform';
@@ -17,7 +18,7 @@ import { attachBackfillReader } from '@/matrix/backfill';
 import { useMatrixClient } from '@/matrix/context';
 import { attachRoomsStore, useRooms } from '@/matrix/rooms-store';
 import { useSettings } from '@/store/settings';
-import { useUi } from '@/store/ui';
+import { openSearch, useUi } from '@/store/ui';
 import { QuickSwitcher } from './quick-switcher';
 import { Rail } from './rail';
 import { RightPanel } from './right-panel';
@@ -76,6 +77,7 @@ export function AppShell({ onLogout }: { onLogout: () => void }) {
       <QuickSwitcher />
       <NewChatDialog open={newChatOpen} onOpenChange={setNewChatOpen} />
       <SettingsDialog onLogout={onLogout} />
+      <ShortcutsDialog />
       <CryptoPrompts />
       <ReminderDialog />
     </div>
@@ -113,6 +115,13 @@ function useGlobalShortcuts() {
       if (mod && e.key.toLowerCase() === 'k') {
         e.preventDefault();
         ui.setSwitcherOpen(!ui.switcherOpen);
+      } else if (mod && e.key.toLowerCase() === 'f' && ui.page === 'chat') {
+        // ⌘F: search the open chat, ⌘⇧F: search all chats.
+        e.preventDefault();
+        openSearch(e.shiftKey ? 'all' : undefined);
+      } else if (mod && e.key === '/') {
+        e.preventDefault();
+        ui.setShortcutsOpen(!ui.shortcutsOpen);
       } else if (mod && e.key === ',') {
         e.preventDefault();
         ui.openSettings();

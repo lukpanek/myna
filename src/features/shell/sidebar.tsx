@@ -17,7 +17,7 @@ import { remindersByRoom, useReminders } from '@/features/later/reminders';
 import { t } from '@/i18n';
 import { cn } from '@/lib/utils';
 import { type NetworkSummary, type RoomSummary, useRooms } from '@/matrix/rooms-store';
-import { useSettings } from '@/store/settings';
+import { fontSizePx, useSettings } from '@/store/settings';
 import { PANEL_WIDTHS, type View, useUi } from '@/store/ui';
 import { buildSections, isMessageRequest, isRoomUnread, roomsForView } from './room-filters';
 import { RoomRow } from './room-row';
@@ -61,7 +61,7 @@ export function Sidebar({ onNewChat }: { onNewChat: () => void }) {
   );
   const density = useSettings((s) => s.density);
   const groupRooms = useSettings((s) => s.groupRooms);
-  const fontSize = useSettings((s) => s.fontSize);
+  const fontSize = useSettings((s) => fontSizePx(s.fontScale));
   const sidebarWidth = useUi((s) => s.sidebarWidth);
   const setSidebarWidth = useUi((s) => s.setSidebarWidth);
 

@@ -1,6 +1,6 @@
 import { Camera, Check, LogOut, Pencil, X } from 'lucide-react';
 import { UserEvent } from 'matrix-js-sdk';
-import { type FormEvent, useEffect, useRef, useState } from 'react';
+import { type FormEvent, useRef, useState } from 'react';
 import { toast } from 'sonner';
 import { MxAvatar } from '@/components/mx-avatar';
 import { Button } from '@/components/ui/button';
@@ -8,7 +8,8 @@ import { Input } from '@/components/ui/input';
 import { t } from '@/i18n';
 import { useMatrixClient } from '@/matrix/context';
 import { useRerenderOn } from '@/matrix/hooks';
-import { errorMessage, Row, Section, TabTitle } from './settings-ui';
+import { SecuritySections } from './security-tab';
+import { errorMessage, Section, TabTitle } from './settings-ui';
 
 export function AccountTab({ onLogout }: { onLogout: () => void }) {
   const client = useMatrixClient();
@@ -16,22 +17,8 @@ export function AccountTab({ onLogout }: { onLogout: () => void }) {
   const me = client.getUser(userId);
   useRerenderOn(me, UserEvent.DisplayName, UserEvent.AvatarUrl);
   const name = me?.displayName || userId;
-  const deviceId = client.getDeviceId();
-  const [deviceName, setDeviceName] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
-
-  useEffect(() => {
-    if (!deviceId) return;
-    let alive = true;
-    client
-      .getDevice(deviceId)
-      .then((d) => alive && setDeviceName(d.display_name ?? null))
-      .catch(() => undefined);
-    return () => {
-      alive = false;
-    };
-  }, [client, deviceId]);
 
   const changeAvatar = async (file: File | undefined) => {
     if (!file) return;
@@ -54,7 +41,7 @@ export function AccountTab({ onLogout }: { onLogout: () => void }) {
 
   return (
     <>
-      <TabTitle>{t('settings.tabAccount')}</TabTitle>
+      <TabTitle>{t('settings.tabAccountSecurity')}</TabTitle>
       <Section title={t('settings.profile')} description={t('settings.profileDescription')}>
         <div className="flex items-start gap-5">
           <div className="group relative">
@@ -79,6 +66,9 @@ export function AccountTab({ onLogout }: { onLogout: () => void }) {
           <div className="min-w-0 flex-1">
             <DisplayNameEditor current={me?.displayName ?? ''} />
             <div className="mt-1 truncate text-[13px] text-muted-foreground select-text">{userId}</div>
+            <div className="truncate text-[12px] text-muted-foreground select-text" title={t('settings.homeserver')}>
+              {client.getHomeserverUrl()}
+            </div>
             <Button
               variant="link"
               size="sm"
@@ -92,17 +82,7 @@ export function AccountTab({ onLogout }: { onLogout: () => void }) {
         </div>
       </Section>
 
-      <Section title={t('settings.thisSession')} description={t('settings.thisSessionDescription')}>
-        <Row label={t('settings.sessionName')}>
-          <span className="text-sm text-muted-foreground">{deviceName ?? '—'}</span>
-        </Row>
-        <Row label={t('settings.sessionId')}>
-          <code className="font-mono text-[13px] text-muted-foreground select-text">{deviceId ?? '—'}</code>
-        </Row>
-        <Row label={t('settings.homeserver')}>
-          <span className="truncate text-sm text-muted-foreground select-text">{client.getHomeserverUrl()}</span>
-        </Row>
-      </Section>
+      <SecuritySections />
 
       <Section title={t('settings.logoutTitle')} description={t('settings.logoutDescription')}>
         <Button variant="outline" size="sm" className="text-destructive hover:text-destructive" onClick={onLogout}>

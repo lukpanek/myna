@@ -14,6 +14,7 @@ export default defineMessages({
     switcherDescription: 'Hledej podle jména',
     switcherPlaceholder: 'Přejít na…',
     nothingFound: 'Nic nenalezeno.',
+    searchMessagesFor: 'Hledat „{query}“ ve zprávách',
     // Rail
     allChats: 'Všechny chaty',
     linkedAccounts: 'Propojené účty',
@@ -86,6 +87,7 @@ export default defineMessages({
     switcherDescription: 'Hľadaj podľa mena',
     switcherPlaceholder: 'Prejsť na…',
     nothingFound: 'Nič sa nenašlo.',
+    searchMessagesFor: 'Hľadať „{query}“ v správach',
     allChats: 'Všetky chaty',
     linkedAccounts: 'Prepojené účty',
     settings: 'Nastavenia',
@@ -152,6 +154,7 @@ export default defineMessages({
     switcherDescription: 'Search by name',
     switcherPlaceholder: 'Go to…',
     nothingFound: 'Nothing found.',
+    searchMessagesFor: 'Search messages for “{query}”',
     allChats: 'All chats',
     linkedAccounts: 'Linked accounts',
     settings: 'Settings',

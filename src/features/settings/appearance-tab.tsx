@@ -1,9 +1,9 @@
 import { Check } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { LOCALES, type MessageKey, systemLocale, t } from '@/i18n';
+import { type MessageKey, t } from '@/i18n';
 import { cn } from '@/lib/utils';
-import { type LanguagePref, type ListDensity, type Theme, useSettings } from '@/store/settings';
-import { Section, SwitchRow, TabTitle } from './settings-ui';
+import { FONT_SCALES, type ListDensity, type Theme, useSettings } from '@/store/settings';
+import { Row, Section, SwitchRow, TabTitle } from './settings-ui';
 
 const THEMES: { value: Theme; label: MessageKey }[] = [
   { value: 'system', label: 'settings.themeSystem' },
@@ -17,25 +17,6 @@ export function AppearanceTab() {
   return (
     <>
       <TabTitle>{t('settings.tabAppearance')}</TabTitle>
-      <Section title={t('settings.language')} description={t('settings.languageDescription')}>
-        <Select value={s.language} onValueChange={(v) => s.set({ language: v as LanguagePref })}>
-          <SelectTrigger className="w-64">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="system">
-              {t('settings.languageSystem', {
-                language: LOCALES.find((l) => l.value === systemLocale())?.label ?? 'English',
-              })}
-            </SelectItem>
-            {LOCALES.map((l) => (
-              <SelectItem key={l.value} value={l.value}>
-                {l.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </Section>
       <Section title={t('settings.theme')} description={t('settings.themeDescription')}>
         <div className="grid grid-cols-3 gap-3">
           {THEMES.map((theme) => (
@@ -83,7 +64,13 @@ export function AppearanceTab() {
           checked={s.showRoomIcons}
           onCheckedChange={(showRoomIcons) => s.set({ showRoomIcons })}
         />
-        <div className="grid grid-cols-2 gap-3">
+        <div className="pt-3 pb-2.5">
+          <div id="density-label" className="text-sm">
+            {t('settings.density')}
+          </div>
+          <div className="text-[13px] text-muted-foreground">{t('settings.densityDescription')}</div>
+        </div>
+        <div role="group" aria-labelledby="density-label" className="grid grid-cols-2 gap-3">
           <DensityOption
             value="comfortable"
             current={s.density}
@@ -101,25 +88,41 @@ export function AppearanceTab() {
         </div>
       </Section>
 
-      <Section title={t('settings.timeline')}>
-        <SwitchRow
-          label={t('settings.showSystemEvents')}
-          description={t('settings.showSystemEventsDescription')}
-          checked={s.showSystemEvents}
-          onCheckedChange={(showSystemEvents) => s.set({ showSystemEvents })}
-        />
-        <SwitchRow
-          label={t('settings.showReadReceipts')}
-          description={t('settings.showReadReceiptsDescription')}
-          checked={s.showReadReceipts}
-          onCheckedChange={(showReadReceipts) => s.set({ showReadReceipts })}
-        />
-        <SwitchRow
-          label={t('settings.showMediaPreviews')}
-          description={t('settings.showMediaPreviewsDescription')}
-          checked={s.showMediaPreviews}
-          onCheckedChange={(showMediaPreviews) => s.set({ showMediaPreviews })}
-        />
+      <Section title={t('settings.scaling')}>
+        <Row
+          label={<label htmlFor="interface-scale">{t('settings.interfaceScale')}</label>}
+          description={t('settings.interfaceScaleDescription')}
+        >
+          <Select value={String(s.interfaceScale)} onValueChange={(v) => s.set({ interfaceScale: Number(v) })}>
+            <SelectTrigger id="interface-scale" className="w-24">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {[80, 90, 100, 110, 125, 150].map((size) => (
+                <SelectItem key={size} value={String(size)}>
+                  {size}%
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </Row>
+        <Row
+          label={<label htmlFor="text-size">{t('settings.fontSize')}</label>}
+          description={t('settings.fontSizeDescription')}
+        >
+          <Select value={String(s.fontScale)} onValueChange={(v) => s.set({ fontScale: Number(v) })}>
+            <SelectTrigger id="text-size" className="w-24">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {FONT_SCALES.map((scale) => (
+                <SelectItem key={scale} value={String(scale)}>
+                  {scale}%
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </Row>
       </Section>
     </>
   );

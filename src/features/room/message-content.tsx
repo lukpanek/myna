@@ -8,6 +8,7 @@ import { AUDIO_KEY, isVoiceMessage, stripReplyFallback } from '@/matrix/event-te
 import type { EncryptedFile } from '@/matrix/media';
 import { AudioPlayer } from './audio-player';
 import { HtmlBody, PlainBody } from './html-body';
+import { LinkPreviews } from './link-preview';
 import {
   FileContent,
   ImageContent,
@@ -140,14 +141,27 @@ export function MessageContent({
       return <LocationContent content={content} />;
     case MsgType.Emote:
       return (
-        <div className="italic">
-          <span className="mr-1 font-medium not-italic text-muted-foreground">* {senderName}</span>
-          <TextBody content={content} isReply={isReply} className="inline" suffix={suffix} />
-        </div>
+        <>
+          <div className="italic">
+            <span className="mr-1 font-medium not-italic text-muted-foreground">* {senderName}</span>
+            <TextBody content={content} isReply={isReply} className="inline" suffix={suffix} />
+          </div>
+          <LinkPreviews content={content} ts={event.getTs()} />
+        </>
       );
     case MsgType.Notice:
-      return <TextBody content={content} isReply={isReply} className="text-muted-foreground" suffix={suffix} />;
+      return (
+        <>
+          <TextBody content={content} isReply={isReply} className="text-muted-foreground" suffix={suffix} />
+          <LinkPreviews content={content} ts={event.getTs()} />
+        </>
+      );
     default:
-      return <TextBody content={content} isReply={isReply} suffix={suffix} />;
+      return (
+        <>
+          <TextBody content={content} isReply={isReply} suffix={suffix} />
+          <LinkPreviews content={content} ts={event.getTs()} />
+        </>
+      );
   }
 }

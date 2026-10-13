@@ -22,12 +22,24 @@ pub fn show_main<R: Runtime>(app: &AppHandle<R>) {
 }
 
 pub fn on_window_event<R: Runtime>(window: &Window<R>, event: &WindowEvent) {
-  if cfg!(target_os = "macos") && window.label() == MAIN && !QUITTING.load(Ordering::Relaxed) {
+  // macOS apps stay running without windows; elsewhere only while the tray icon is there.
+  let keep_running = cfg!(target_os = "macos") || tray_enabled();
+  if keep_running && window.label() == MAIN && !QUITTING.load(Ordering::Relaxed) {
     if let WindowEvent::CloseRequested { api, .. } = event {
       api.prevent_close();
       hide(window);
     }
   }
+}
+
+#[cfg(desktop)]
+fn tray_enabled() -> bool {
+  crate::tray::ENABLED.load(Ordering::Relaxed)
+}
+
+#[cfg(not(desktop))]
+fn tray_enabled() -> bool {
+  false
 }
 
 fn hide<R: Runtime>(window: &Window<R>) {
@@ -60,7 +72,7 @@ pub fn on_run_event<R: Runtime>(app: &AppHandle<R>, event: RunEvent) {
 pub fn navigation_guard<R: Runtime>() -> TauriPlugin<R> {
   PluginBuilder::new("navigation-guard")
     .on_navigation(|webview, url| {
-      if webview.label() != MAIN || is_app_url(url) {
+      if webview.label() != MAIN || is_app_url(url) || is_embed_url(url) {
         return true;
       }
       if matches!(url.scheme(), "http" | "https" | "mailto") {
@@ -69,6 +81,28 @@ pub fn navigation_guard<R: Runtime>() -> TauriPlugin<R> {
       false
     })
     .build()
+}
+
+/// Hosts of the inline players in `link-preview.tsx` (`embedFor`). WebKit runs
+/// iframe navigations through this guard too; the iframes are sandboxed without
+/// `allow-top-navigation`, so these hosts can never replace the app itself.
+const EMBED_HOSTS: &[&str] = &[
+  "youtube-nocookie.com",
+  "youtube.com",
+  "google.com",
+  "doubleclick.net",
+  "spotify.com",
+  "vimeo.com",
+  "embed.music.apple.com",
+];
+
+fn is_embed_url(url: &Url) -> bool {
+  url.scheme() == "https"
+    && url.host_str().is_some_and(|host| {
+      EMBED_HOSTS
+        .iter()
+        .any(|h| host == *h || host.strip_suffix(h).is_some_and(|rest| rest.ends_with('.')))
+    })
 }
 
 fn is_app_url(url: &Url) -> bool {

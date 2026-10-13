@@ -19,7 +19,7 @@ import { t } from '@/i18n';
 import { dayjs } from '@/lib/time';
 import { cn } from '@/lib/utils';
 import { useEmitterEvent, useMatrixClient } from '@/matrix/context';
-import { errorMessage, Row, Section, TabTitle } from './settings-ui';
+import { errorMessage, Row, Section } from './settings-ui';
 
 interface CryptoStatus {
   available: boolean;
@@ -70,7 +70,8 @@ function useCryptoStatus() {
   return { status, refresh };
 }
 
-export function SecurityTab() {
+/** Encryption status and sessions; part of the account tab. */
+export function SecuritySections() {
   const client = useMatrixClient();
   const { status, refresh } = useCryptoStatus();
   const verifying = useCryptoUi((s) => s.verifying);
@@ -95,7 +96,6 @@ export function SecurityTab() {
 
   return (
     <>
-      <TabTitle>{t('settings.tabSecurity')}</TabTitle>
       <Section
         title={t('settings.encryptionStatus')}
         description={t('settings.encryptionStatusDescription')}

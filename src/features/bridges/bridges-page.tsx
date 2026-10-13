@@ -31,7 +31,6 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { Separator } from '@/components/ui/separator';
 import { Skeleton } from '@/components/ui/skeleton';
 import { t } from '@/i18n';
 import { tn } from '@/i18n/rich';
@@ -104,7 +103,7 @@ export function BridgesPage() {
           </div>
         )}
 
-        <div className="mt-8 grid gap-10">
+        <div className="mt-8 grid gap-6">
           {initialLoading && <SectionSkeleton />}
           {bridges.map((entry) => (
             <BridgeSection
@@ -164,8 +163,8 @@ function BridgeSection({
 
   if (!whoami) {
     return (
-      <section>
-        <div className="flex items-center gap-3">
+      <Block>
+        <BlockHeader>
           <span className="size-7 shrink-0 rounded-full bg-muted" />
           <div className="min-w-0 flex-1">
             <h2 className="truncate text-[15px] font-semibold">{hostLabel(entry.url)}</h2>
@@ -181,24 +180,25 @@ function BridgeSection({
             <RefreshCw className={cn(entry.loading && 'animate-spin')} />
             {t('common.retry')}
           </Button>
-        </div>
-        <Separator className="mt-3" />
-        {entry.loading ? (
-          <LoginRowSkeleton />
-        ) : (
-          <p className="flex gap-2 py-4 text-sm text-muted-foreground">
-            <CircleAlert className="mt-0.5 size-4 shrink-0 text-destructive" />
-            {entry.error ?? t('bridges.bridgeNoResponse')}
-          </p>
-        )}
-      </section>
+        </BlockHeader>
+        <BlockBody>
+          {entry.loading ? (
+            <LoginRowSkeleton />
+          ) : (
+            <p className="flex gap-2 px-4 py-4 text-sm text-muted-foreground">
+              <CircleAlert className="mt-0.5 size-4 shrink-0 text-destructive" />
+              {entry.error ?? t('bridges.bridgeNoResponse')}
+            </p>
+          )}
+        </BlockBody>
+      </Block>
     );
   }
 
   const network = whoami.network;
   return (
-    <section>
-      <div className="flex items-center gap-3">
+    <Block>
+      <BlockHeader>
         <NetworkIcon
           networkId={network.network_id.toLowerCase()}
           avatarMxc={network.network_icon}
@@ -260,36 +260,36 @@ function BridgeSection({
           </DropdownMenuContent>
         </DropdownMenu>
         <NetworkIconDialog target={iconTarget} onOpenChange={(open) => !open && setIconTarget(null)} />
-      </div>
-      <Separator className="mt-3" />
+      </BlockHeader>
 
-      {entry.error && (
-        <p className="flex gap-2 pt-3 text-xs text-muted-foreground">
-          <CircleAlert className="mt-px size-3.5 shrink-0 text-destructive" />
-          {t('bridges.refreshFailed', { error: entry.error })}
-        </p>
-      )}
+      <BlockBody>
+        {entry.error && (
+          <p className="flex gap-2 border-b px-4 py-2.5 text-xs text-muted-foreground">
+            <CircleAlert className="mt-px size-3.5 shrink-0 text-destructive" />
+            {t('bridges.refreshFailed', { error: entry.error })}
+          </p>
+        )}
 
-      {logins.length === 0 ? (
-        <div className="flex items-center justify-between gap-4 py-4">
-          <p className="text-sm text-muted-foreground">{t('bridges.noAccounts')}</p>
-          <Button onClick={() => onLogin({ url: entry.url })}>{t('bridges.signIn')}</Button>
-        </div>
-      ) : (
-        <ul>
-          {logins.map((login, i) => (
-            <li key={login.id}>
-              {i > 0 && <Separator />}
-              <LoginRow
-                login={login}
-                onRelogin={() => onLogin({ url: entry.url, reloginId: login.id })}
-                onLogout={() => onLogout(login)}
-              />
-            </li>
-          ))}
-        </ul>
-      )}
-    </section>
+        {logins.length === 0 ? (
+          <div className="flex items-center justify-between gap-4 px-4 py-4">
+            <p className="text-sm text-muted-foreground">{t('bridges.noAccounts')}</p>
+            <Button onClick={() => onLogin({ url: entry.url })}>{t('bridges.signIn')}</Button>
+          </div>
+        ) : (
+          <ul className="divide-y">
+            {logins.map((login) => (
+              <li key={login.id}>
+                <LoginRow
+                  login={login}
+                  onRelogin={() => onLogin({ url: entry.url, reloginId: login.id })}
+                  onLogout={() => onLogout(login)}
+                />
+              </li>
+            ))}
+          </ul>
+        )}
+      </BlockBody>
+    </Block>
   );
 }
 
@@ -308,7 +308,7 @@ function LoginRow({
   const showDetail = status.detail && status.kind !== 'connected';
 
   return (
-    <div className="flex items-center gap-3 py-3">
+    <div className="flex items-center gap-3 px-4 py-3">
       <MxAvatar mxc={login.profile?.avatar} name={name} seed={login.id} size={36} />
       <div className="min-w-0 flex-1">
         <div className="truncate text-sm font-medium">{name}</div>
@@ -436,29 +436,33 @@ function OtherBridges({ networks }: { networks: NetworkSummary[] }) {
   };
 
   return (
-    <section>
-      <h2 className="text-[15px] font-semibold">{t('bridges.otherBridges')}</h2>
-      <p className="mt-0.5 text-xs text-muted-foreground">{t('bridges.otherBridgesDescription')}</p>
-      <Separator className="mt-3" />
-      <ul>
-        {networks.map((n, i) => (
-          <li key={n.id}>
-            {i > 0 && <Separator />}
-            <div className="flex items-center gap-3 py-3">
-              <NetworkIcon networkId={n.id} avatarMxc={n.avatarMxc} name={n.name} size={28} />
-              <div className="min-w-0 flex-1">
-                <div className="truncate text-sm font-medium">{n.name}</div>
-                <div className="truncate text-xs text-muted-foreground">{n.bridgeBot}</div>
+    <Block>
+      <BlockHeader>
+        <div className="min-w-0 flex-1">
+          <h2 className="text-[15px] font-semibold">{t('bridges.otherBridges')}</h2>
+          <p className="mt-0.5 text-xs text-muted-foreground">{t('bridges.otherBridgesDescription')}</p>
+        </div>
+      </BlockHeader>
+      <BlockBody>
+        <ul className="divide-y">
+          {networks.map((n) => (
+            <li key={n.id}>
+              <div className="flex items-center gap-3 px-4 py-3">
+                <NetworkIcon networkId={n.id} avatarMxc={n.avatarMxc} name={n.name} size={28} />
+                <div className="min-w-0 flex-1">
+                  <div className="truncate text-sm font-medium">{n.name}</div>
+                  <div className="truncate text-xs text-muted-foreground">{n.bridgeBot}</div>
+                </div>
+                <Button variant="outline" size="sm" disabled={opening === n.bridgeBot} onClick={() => void open(n.bridgeBot!)}>
+                  {opening === n.bridgeBot ? <LoaderCircle className="animate-spin" /> : <MessageSquare />}
+                  {t('bridges.manageViaBot')}
+                </Button>
               </div>
-              <Button variant="outline" size="sm" disabled={opening === n.bridgeBot} onClick={() => void open(n.bridgeBot!)}>
-                {opening === n.bridgeBot ? <LoaderCircle className="animate-spin" /> : <MessageSquare />}
-                {t('bridges.manageViaBot')}
-              </Button>
-            </div>
-          </li>
-        ))}
-      </ul>
-    </section>
+            </li>
+          ))}
+        </ul>
+      </BlockBody>
+    </Block>
   );
 }
 
@@ -509,29 +513,44 @@ function Code({ children }: { children: ReactNode }) {
   return <code className="rounded bg-muted px-1 py-0.5 font-mono text-xs text-foreground">{children}</code>;
 }
 
+// ── Block layout ────────────────────────────────────────────────────────────
+
+/** Rounded outer frame on a darker surface; the body is a nested rounded panel on top. */
+function Block({ children }: { children: ReactNode }) {
+  return <section className="rounded-xl border bg-muted/60 dark:bg-black/20">{children}</section>;
+}
+
+function BlockHeader({ children }: { children: ReactNode }) {
+  return <div className="flex items-center gap-3 px-4 py-3">{children}</div>;
+}
+
+function BlockBody({ children, className }: { children: ReactNode; className?: string }) {
+  return <div className={cn('-mx-px -mb-px rounded-xl border bg-card', className)}>{children}</div>;
+}
+
 // ── Skeletons & helpers ─────────────────────────────────────────────────────
 
 function SectionSkeleton() {
   return (
-    <section>
-      <div className="flex items-center gap-3">
+    <Block>
+      <BlockHeader>
         <Skeleton className="size-7 rounded-full" />
         <div className="grid flex-1 gap-1.5">
           <Skeleton className="h-4 w-32" />
           <Skeleton className="h-3 w-48" />
         </div>
-      </div>
-      <Separator className="mt-3" />
-      <LoginRowSkeleton />
-      <Separator />
-      <LoginRowSkeleton />
-    </section>
+      </BlockHeader>
+      <BlockBody className="divide-y">
+        <LoginRowSkeleton />
+        <LoginRowSkeleton />
+      </BlockBody>
+    </Block>
   );
 }
 
 function LoginRowSkeleton() {
   return (
-    <div className="flex items-center gap-3 py-3">
+    <div className="flex items-center gap-3 px-4 py-3">
       <Skeleton className="size-9 rounded-full" />
       <div className="grid flex-1 gap-1.5">
         <Skeleton className="h-3.5 w-40" />

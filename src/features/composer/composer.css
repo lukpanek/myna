@@ -39,7 +39,7 @@
   border-radius: 4px;
   background: var(--muted);
   padding: 1px 4px;
-  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-family: 'Noto Sans Mono Variable', ui-monospace, SFMono-Regular, Menlo, monospace;
   font-size: 0.875em;
   color: var(--destructive);
 }
@@ -50,7 +50,7 @@
   border-radius: 6px;
   background: var(--muted);
   padding: 6px 10px;
-  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-family: 'Noto Sans Mono Variable', ui-monospace, SFMono-Regular, Menlo, monospace;
   font-size: 0.875em;
 }
 

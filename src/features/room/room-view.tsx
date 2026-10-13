@@ -1,5 +1,5 @@
 import { KnownMembership, type MatrixEvent, type Room, type RoomMember, RoomEvent, RoomMemberEvent, RoomStateEvent } from 'matrix-js-sdk';
-import { Bell, BellOff, BellRing, Info, Loader2, Upload } from 'lucide-react';
+import { Bell, BellOff, BellRing, Info, Loader2, Search, Upload } from 'lucide-react';
 import { type DragEvent, useState } from 'react';
 import { toast } from 'sonner';
 import { MxAvatar } from '@/components/mx-avatar';
@@ -16,6 +16,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip
 import { Composer } from '@/features/composer/composer';
 import { composerKey, useComposerStore } from '@/features/composer/composer-store';
 import { t } from '@/i18n';
+import { modKey } from '@/lib/platform';
 import { cn } from '@/lib/utils';
 import { useEmitterEvent, useMatrixClient } from '@/matrix/context';
 import { useRerenderOn, useRoom, useRoomSummary } from '@/matrix/hooks';
@@ -23,7 +24,7 @@ import { NOTIFY_LEVELS, type NotifyLevel, notifyLevelLabel, setNotifyLevel } fro
 import { leaveRoom } from '@/matrix/room-actions';
 import type { RoomSummary } from '@/matrix/rooms-store';
 import { useRooms } from '@/matrix/rooms-store';
-import { useUi } from '@/store/ui';
+import { openSearch, useUi } from '@/store/ui';
 import { PinnedMessages } from './pinned-messages';
 import { RoomDialogs } from './room-dialogs';
 import { Timeline } from './timeline';
@@ -140,6 +141,7 @@ function RoomHeader({ room, summary }: { room: Room; summary: RoomSummary | unde
   const level = summary?.notifyLevel ?? 'default';
   const NotifyIcon = NOTIFY_ICONS[level];
   const detailsOpen = rightPanel?.kind === 'details';
+  const searchOpen = rightPanel?.kind === 'search';
 
   const subtitle = [
     bridge ? (account ? `${bridge.networkName} · ${account.name}` : bridge.networkName) : null,
@@ -178,6 +180,21 @@ function RoomHeader({ room, summary }: { room: Room; summary: RoomSummary | unde
       </button>
 
       <div className="ml-auto flex shrink-0 items-center gap-1">
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              aria-label={t('room.searchInChat')}
+              aria-pressed={searchOpen}
+              className={cn(searchOpen && 'bg-accent')}
+              onClick={() => (searchOpen ? setRightPanel(null) : openSearch('room'))}
+            >
+              <Search />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>{t('room.searchInChat')} ({modKey}F)</TooltipContent>
+        </Tooltip>
         <PinnedMessages room={room} />
         <DropdownMenu>
           <Tooltip>

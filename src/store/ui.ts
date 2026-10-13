@@ -16,13 +16,18 @@ export const PANEL_WIDTHS = {
 export type RightPanel =
   | { kind: 'details' }
   | { kind: 'thread'; rootId: string }
+  /** Message search in the open chat (`room`) or across all chats (`all`). */
+  | { kind: 'search'; scope: SearchScope; query?: string }
   /** `back` is the panel the profile was opened from (details or a thread). */
   | { kind: 'user'; userId: string; back?: Exclude<RightPanel, { kind: 'user' } | null> }
   | null;
 
-/** Threads and profiles belong to one room; details follow the user to the next room. */
+export type SearchScope = 'room' | 'all';
+
+/** Threads and profiles belong to one room; details and global search follow the user to the next room. */
 function keepPanelAcrossRooms(panel: RightPanel): RightPanel {
   if (panel?.kind === 'details') return panel;
+  if (panel?.kind === 'search' && panel.scope === 'all') return panel;
   if (panel?.kind === 'user' && panel.back?.kind === 'details') return panel.back;
   return null;
 }
@@ -36,6 +41,13 @@ export function openUserProfile(userId: string) {
   const { rightPanel, setRightPanel } = useUi.getState();
   const back = rightPanel?.kind === 'user' ? rightPanel.back : (rightPanel ?? undefined);
   setRightPanel({ kind: 'user', userId, back });
+}
+
+/** Opens message search; the open chat by default, all chats when none is open. */
+export function openSearch(scope?: SearchScope, query?: string) {
+  const { roomId, page, setRightPanel, setPage } = useUi.getState();
+  if (page !== 'chat') setPage('chat');
+  setRightPanel({ kind: 'search', scope: scope ?? (roomId ? 'room' : 'all'), query });
 }
 
 export function viewKey(view: View): string {
@@ -65,6 +77,7 @@ interface UiState {
   settingsOpen: boolean;
   settingsTab: string;
   switcherOpen: boolean;
+  shortcutsOpen: boolean;
   /** Event to scroll to and highlight once the timeline renders it. */
   focusEventId: string | null;
   sidebarWidth: number;
@@ -80,6 +93,7 @@ interface UiState {
   openSettings: (tab?: string) => void;
   closeSettings: () => void;
   setSwitcherOpen: (open: boolean) => void;
+  setShortcutsOpen: (open: boolean) => void;
   clearFocusEvent: () => void;
   setSidebarWidth: (width: number) => void;
   setRightPanelWidth: (width: number) => void;
@@ -99,8 +113,9 @@ export const useUi = create<UiState>()(
       collapsedSections: {},
       rightPanel: null,
       settingsOpen: false,
-      settingsTab: 'appearance',
+      settingsTab: 'general',
       switcherOpen: false,
+      shortcutsOpen: false,
       focusEventId: null,
       sidebarWidth: PANEL_WIDTHS.sidebar.default,
       rightPanelWidth: PANEL_WIDTHS.rightPanel.default,
@@ -134,6 +149,7 @@ export const useUi = create<UiState>()(
       openSettings: (tab) => set((s) => ({ settingsOpen: true, settingsTab: tab ?? s.settingsTab })),
       closeSettings: () => set({ settingsOpen: false }),
       setSwitcherOpen: (switcherOpen) => set({ switcherOpen }),
+      setShortcutsOpen: (shortcutsOpen) => set({ shortcutsOpen }),
       clearFocusEvent: () => set({ focusEventId: null }),
       setSidebarWidth: (sidebarWidth) => set({ sidebarWidth }),
       setRightPanelWidth: (rightPanelWidth) => set({ rightPanelWidth }),

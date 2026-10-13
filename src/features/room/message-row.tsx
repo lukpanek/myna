@@ -50,7 +50,7 @@ function TimeGutter({ ts }: { ts: number }) {
 function SystemRow({ room, event }: { room: Room; event: MatrixEvent }) {
   const text = describeSystemEvent(event, room);
   return (
-    <div data-event-id={event.getId()} className="group/row cv-auto flex gap-2 px-5 py-px text-[13px] text-muted-foreground">
+    <div data-event-id={event.getId()} data-ts={event.getTs()} className="group/row cv-auto flex gap-2 px-5 py-px text-[13px] text-muted-foreground">
       <div className="w-9 shrink-0">
         <TimeGutter ts={event.getTs()} />
       </div>
@@ -81,6 +81,7 @@ function ChatRow({ room, event, continuation, receipts, highlighted, hideThreadS
   return (
     <div
       data-event-id={event.getId()}
+      data-ts={event.getTs()}
       onMouseEnter={() => {
         setHovered(true);
         setSlowFade(false);
