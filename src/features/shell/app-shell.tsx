@@ -1,6 +1,8 @@
 import { Search } from 'lucide-react';
 import { Logo } from '@/components/logo';
 import { useEffect, useState } from 'react';
+import { attachActivity } from '@/features/activity/activity';
+import { ActivityFeed } from '@/features/activity/activity-feed';
 import { BridgesPage } from '@/features/bridges/bridges-page';
 import { CryptoPrompts } from '@/features/crypto/crypto-prompts';
 import { ReminderDialog } from '@/features/later/reminder-dialog';
@@ -36,6 +38,7 @@ export function AppShell({ onLogout }: { onLogout: () => void }) {
   useEffect(() => attachBackfillReader(client), [client]);
   useEffect(() => attachReminders(client), [client]);
   useEffect(() => attachScheduledSender(client), [client]);
+  useEffect(() => attachActivity(client), [client]);
   useNativeIntegration();
   useDesktopNotifications();
   useGlobalShortcuts();
@@ -43,7 +46,7 @@ export function AppShell({ onLogout }: { onLogout: () => void }) {
   // Drop a stale selection (left room, other account) once the list is known.
   const roomKnown = useRooms((s) => (roomId ? !!s.rooms[roomId] : true));
   const ready = useRooms((s) => s.ready);
-  const showRoom = page === 'chat' && roomId && (roomKnown || !ready);
+  const showRoom = page !== 'bridges' && roomId && (roomKnown || !ready);
 
   return (
     <div className="flex h-full flex-col bg-rail">
@@ -64,9 +67,9 @@ export function AppShell({ onLogout }: { onLogout: () => void }) {
             <BridgesPage />
           ) : (
             <>
-              <Sidebar onNewChat={() => setNewChatOpen(true)} />
+              {page === 'activity' ? <ActivityFeed /> : <Sidebar onNewChat={() => setNewChatOpen(true)} />}
               <main className="flex min-w-0 flex-1 flex-col">
-                {showRoom ? <RoomView key={roomId} roomId={roomId} /> : <NoRoom />}
+                {showRoom ? <RoomView key={roomId} roomId={roomId} /> : <NoRoom activity={page === 'activity'} />}
               </main>
               <RightPanel />
             </>
@@ -84,14 +87,14 @@ export function AppShell({ onLogout }: { onLogout: () => void }) {
   );
 }
 
-function NoRoom() {
+function NoRoom({ activity }: { activity: boolean }) {
   return (
     <div
       data-tauri-drag-region
       className="flex flex-1 flex-col items-center justify-center gap-4 text-sm text-muted-foreground"
     >
       <Logo size={64} className="opacity-90" />
-      {t('shell.noRoomSelected', { shortcut: `${modKey}K` })}
+      {activity ? t('activity.noSelection') : t('shell.noRoomSelected', { shortcut: `${modKey}K` })}
     </div>
   );
 }
@@ -115,7 +118,7 @@ function useGlobalShortcuts() {
       if (mod && e.key.toLowerCase() === 'k') {
         e.preventDefault();
         ui.setSwitcherOpen(!ui.switcherOpen);
-      } else if (mod && e.key.toLowerCase() === 'f' && ui.page === 'chat') {
+      } else if (mod && e.key.toLowerCase() === 'f' && ui.page !== 'bridges') {
         // ⌘F: search the open chat, ⌘⇧F: search all chats.
         e.preventDefault();
         openSearch(e.shiftKey ? 'all' : undefined);

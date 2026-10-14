@@ -175,6 +175,8 @@ function AboutSection() {
 /** Session details like Element's Help & About → Advanced; the access token stays hidden until revealed. */
 function DeveloperSection() {
   const client = useMatrixClient();
+  const webInspector = useSettings((s) => s.webInspector);
+  const set = useSettings((s) => s.set);
   const [revealed, setRevealed] = useState(false);
   const token = client.getAccessToken() ?? '';
 
@@ -200,6 +202,15 @@ function DeveloperSection() {
         <code className="mt-1 block rounded-md bg-muted px-2.5 py-2 font-mono text-[12px] break-all select-text">
           {token}
         </code>
+      )}
+      {/* Development builds always have the inspector. */}
+      {isTauri && !import.meta.env.DEV && (
+        <SwitchRow
+          label={t('settings.webInspector')}
+          description={t('settings.webInspectorDescription')}
+          checked={webInspector}
+          onCheckedChange={(value) => set({ webInspector: value })}
+        />
       )}
     </Section>
   );

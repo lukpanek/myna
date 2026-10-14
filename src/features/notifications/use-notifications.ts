@@ -10,7 +10,12 @@ import {
 } from 'matrix-js-sdk';
 import { useEffect } from 'react';
 import { t } from '@/i18n';
-import { isWindowFocused, requestNotificationPermission, showNotification } from '@/lib/native';
+import {
+  isWindowFocused,
+  type NotificationSender,
+  requestNotificationPermission,
+  showNotification,
+} from '@/lib/native';
 import { isBackfill } from '@/matrix/backfill';
 import { isOwnGhost } from '@/matrix/bridge';
 import { useMatrixClient } from '@/matrix/context';
@@ -35,6 +40,8 @@ interface Candidate {
   title: string;
   body: string;
   sound: boolean;
+  avatarMxc?: string;
+  sender?: NotificationSender;
 }
 
 export function newMessagesLabel(n: number): string {
@@ -87,7 +94,7 @@ function evaluate(client: MatrixClient, event: MatrixEvent, room: Room): Candida
   if (!notify) return null;
 
   // The user is looking at this chat already.
-  if (isWindowFocused() && useUi.getState().page === 'chat' && useUi.getState().roomId === room.roomId) {
+  if (isWindowFocused() && useUi.getState().page !== 'bridges' && useUi.getState().roomId === room.roomId) {
     return null;
   }
 
@@ -100,11 +107,23 @@ function evaluate(client: MatrixClient, event: MatrixEvent, room: Room): Candida
   if (summary?.bridge) title += ` (${summary.bridge.networkName})`;
   const body = settings.showContent ? truncate(describeEvent(event), BODY_MAX) || t('notifications.newMessage') : t('notifications.newMessage');
 
-  return { roomId: room.roomId, title, body, sound: settings.sound };
+  const senderAvatar = room.getMember(senderId)?.getMxcAvatarUrl() ?? undefined;
+  // Chats without their own picture fall back to the sender's.
+  const avatarMxc = summary?.avatarMxc ?? senderAvatar;
+  const sender: NotificationSender = {
+    id: senderId,
+    name: senderName,
+    // Bridged DMs often carry the contact's picture on the room only.
+    avatarMxc: senderAvatar ?? (isDm ? avatarMxc : undefined),
+    conversation: isDm ? undefined : roomName,
+  };
+
+  return { roomId: room.roomId, title, body, sound: settings.sound, avatarMxc, sender };
 }
 
 function show(c: Candidate) {
-  showNotification({ title: c.title, body: c.body, roomId: c.roomId, sound: c.sound }).catch((err) =>
+  const { title, body, roomId, sound, avatarMxc, sender } = c;
+  showNotification({ title, body, roomId, sound, avatarMxc, sender }).catch((err) =>
     console.warn('Notifikaci se nepodařilo zobrazit', err),
   );
 }

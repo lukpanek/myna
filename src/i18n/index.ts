@@ -3,6 +3,7 @@ import 'dayjs/locale/cs';
 import 'dayjs/locale/sk';
 import { type LanguagePref, useSettings } from '@/store/settings';
 import type { Locale, Message } from './define';
+import activity from './messages/activity';
 import app from './messages/app';
 import bridges from './messages/bridges';
 import common from './messages/common';
@@ -41,6 +42,7 @@ const catalogs = {
   bridges,
   newChat,
   later,
+  activity,
 };
 
 type Catalogs = typeof catalogs;

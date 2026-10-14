@@ -33,7 +33,7 @@ import { useMatrixClient } from '@/matrix/context';
 import { stripReplyFallback } from '@/matrix/event-text';
 import { canPin, pinnedEventIds, togglePin } from '@/matrix/pins';
 import { roomPermalink } from '@/matrix/room-actions';
-import { useSettings } from '@/store/settings';
+import { QUICK_REACTION_COUNT, useSettings } from '@/store/settings';
 import { useUi } from '@/store/ui';
 import { toggleReaction } from './reactions';
 import { useRoomDialogs } from './room-dialogs';
@@ -213,6 +213,7 @@ interface HoverToolbarProps {
 export function HoverToolbar({ room, event, threadId, onOpenChange }: HoverToolbarProps) {
   const client = useMatrixClient();
   const recent = useSettings((s) => s.recentEmoji);
+  const quick = useSettings((s) => s.quickReactions) ?? recent.slice(0, QUICK_REACTION_COUNT);
   const pushRecentEmoji = useSettings((s) => s.pushRecentEmoji);
   const [pickerOpen, setPickerOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -241,7 +242,7 @@ export function HoverToolbar({ room, event, threadId, onOpenChange }: HoverToolb
       onClick={(e) => e.stopPropagation()}
     >
       {canReact &&
-        recent.slice(0, 3).map((emoji) => (
+        quick.map((emoji) => (
           <button
             key={emoji}
             type="button"

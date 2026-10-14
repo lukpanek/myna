@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+import type { ActivityTab } from '@/features/activity/activity';
 
 /** What the rail selected: the unified inbox, one bridged network, native Matrix rooms or a space. */
 export type View =
@@ -11,6 +12,7 @@ export type View =
 export const PANEL_WIDTHS = {
   sidebar: { default: 300, min: 220, max: 480 },
   rightPanel: { default: 360, min: 300, max: 640 },
+  activity: { default: 440, min: 320, max: 720 },
 } as const;
 
 export type RightPanel =
@@ -33,7 +35,7 @@ function keepPanelAcrossRooms(panel: RightPanel): RightPanel {
 }
 
 /** Full-page screens that replace the room view. */
-export type Page = 'chat' | 'bridges';
+export type Page = 'chat' | 'activity' | 'bridges';
 export type SidebarTab = 'chats' | 'requests';
 
 /** Opens a member's profile in the right panel; the back arrow returns to details or the thread. */
@@ -46,8 +48,24 @@ export function openUserProfile(userId: string) {
 /** Opens message search; the open chat by default, all chats when none is open. */
 export function openSearch(scope?: SearchScope, query?: string) {
   const { roomId, page, setRightPanel, setPage } = useUi.getState();
-  if (page !== 'chat') setPage('chat');
+  if (page === 'bridges') setPage('chat');
   setRightPanel({ kind: 'search', scope: scope ?? (roomId ? 'room' : 'all'), query });
+}
+
+/** Shows an activity item next to the feed: the chat at the event, threads in the right panel. */
+export function openActivityItem(roomId: string, eventId: string, threadRootId?: string) {
+  useUi.setState((s) => ({
+    page: 'activity',
+    roomId,
+    focusEventId: threadRootId ?? eventId,
+    rightPanel: threadRootId
+      ? { kind: 'thread', rootId: threadRootId }
+      : s.roomId !== roomId
+        ? keepPanelAcrossRooms(s.rightPanel)
+        : s.rightPanel?.kind === 'thread'
+          ? null
+          : s.rightPanel,
+  }));
 }
 
 export function viewKey(view: View): string {
@@ -82,6 +100,9 @@ interface UiState {
   focusEventId: string | null;
   sidebarWidth: number;
   rightPanelWidth: number;
+  activityTab: ActivityTab;
+  activityUnreadOnly: boolean;
+  activityWidth: number;
 
   setView: (view: View) => void;
   openRoom: (roomId: string, opts?: { eventId?: string; view?: View }) => void;
@@ -97,6 +118,9 @@ interface UiState {
   clearFocusEvent: () => void;
   setSidebarWidth: (width: number) => void;
   setRightPanelWidth: (width: number) => void;
+  setActivityTab: (tab: ActivityTab) => void;
+  toggleActivityUnreadOnly: () => void;
+  setActivityWidth: (width: number) => void;
 }
 
 export const useUi = create<UiState>()(
@@ -119,6 +143,9 @@ export const useUi = create<UiState>()(
       focusEventId: null,
       sidebarWidth: PANEL_WIDTHS.sidebar.default,
       rightPanelWidth: PANEL_WIDTHS.rightPanel.default,
+      activityTab: 'all',
+      activityUnreadOnly: false,
+      activityWidth: PANEL_WIDTHS.activity.default,
 
       setView: (view) =>
         set((s) => ({
@@ -153,6 +180,9 @@ export const useUi = create<UiState>()(
       clearFocusEvent: () => set({ focusEventId: null }),
       setSidebarWidth: (sidebarWidth) => set({ sidebarWidth }),
       setRightPanelWidth: (rightPanelWidth) => set({ rightPanelWidth }),
+      setActivityTab: (activityTab) => set({ activityTab }),
+      toggleActivityUnreadOnly: () => set((s) => ({ activityUnreadOnly: !s.activityUnreadOnly })),
+      setActivityWidth: (activityWidth) => set({ activityWidth }),
     }),
     {
       name: 'myna.ui',
@@ -167,6 +197,9 @@ export const useUi = create<UiState>()(
         collapsedSections: s.collapsedSections,
         sidebarWidth: s.sidebarWidth,
         rightPanelWidth: s.rightPanelWidth,
+        activityTab: s.activityTab,
+        activityUnreadOnly: s.activityUnreadOnly,
+        activityWidth: s.activityWidth,
       }),
     },
   ),

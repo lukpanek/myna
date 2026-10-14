@@ -49,6 +49,7 @@ pub fn run() {
       cookie_login::open_cookie_login,
       notifications::notification_permission,
       notifications::native_notify,
+      window::set_web_inspector,
       #[cfg(desktop)]
       tray::update_tray,
     ])

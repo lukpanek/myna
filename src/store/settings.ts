@@ -45,7 +45,11 @@ export interface Settings {
   trayIcon: boolean;
   /** Shift+Enter sends instead of Enter. */
   sendWithShift: boolean;
+  /** Web inspector in release builds (right click → Inspect Element). */
+  webInspector: boolean;
   recentEmoji: string[];
+  /** Emoji in the message hover toolbar; null = the most recently used ones. */
+  quickReactions: string[] | null;
   /** Old history a bridge copies into a new chat is marked read (private receipt). */
   markBridgeHistoryRead: boolean;
 
@@ -97,6 +101,8 @@ function scaleFromPx(px: number): number {
   return FONT_SCALES.reduce((best, s) => (Math.abs(s - wanted) < Math.abs(best - wanted) ? s : best), 100);
 }
 
+export const QUICK_REACTION_COUNT = 3;
+
 export const DEFAULT_RECENT_EMOJI = ['👍', '❤️', '😂', '🙏', '👀', '🎉'];
 
 export const useSettings = create<Settings & SettingsActions>()(
@@ -118,7 +124,9 @@ export const useSettings = create<Settings & SettingsActions>()(
       showLinkPreviews: true,
       trayIcon: true,
       sendWithShift: false,
+      webInspector: false,
       recentEmoji: DEFAULT_RECENT_EMOJI,
+      quickReactions: null,
       markBridgeHistoryRead: true,
       notifications: {
         enabled: true,

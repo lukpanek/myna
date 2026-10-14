@@ -1,4 +1,4 @@
-import { CheckCheck, Hash, Inbox, Pencil, Plug, Settings, Trash2 } from 'lucide-react';
+import { Bell, CheckCheck, Hash, MessagesSquare, Pencil, Plug, Settings, Trash2 } from 'lucide-react';
 import { type ReactNode, useMemo, useState } from 'react';
 import { toast } from 'sonner';
 import { useShallow } from 'zustand/react/shallow';
@@ -11,6 +11,7 @@ import {
   ContextMenuTrigger,
 } from '@/components/ui/context-menu';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { activityBadge, useActivity } from '@/features/activity/activity';
 import { NetworkIconDialog, type NetworkIconTarget } from '@/features/bridges/network-icon-dialog';
 import { t } from '@/i18n';
 import { cn } from '@/lib/utils';
@@ -54,6 +55,12 @@ export function Rail({ onLogout }: { onLogout: () => void }) {
     [rooms],
   );
 
+  const activityItems = useActivity((s) => s.items);
+  const activityTotals = useMemo(
+    () => ({ unread: activityItems.some((i) => i.unread), highlight: activityBadge(activityItems) }),
+    [activityItems],
+  );
+
   const active = page === 'chat' ? viewKey(view) : null;
   const [iconTarget, setIconTarget] = useState<NetworkIconTarget | null>(null);
   const [removeTarget, setRemoveTarget] = useState<RemoveTarget | null>(null);
@@ -73,7 +80,15 @@ export function Rail({ onLogout }: { onLogout: () => void }) {
         totals={totals.get('all')}
         onClick={() => setView({ kind: 'all' })}
       >
-        <Inbox className="size-5" />
+        <MessagesSquare className="size-5" />
+      </RailItem>
+      <RailItem
+        label={t('activity.title')}
+        active={page === 'activity'}
+        totals={activityTotals}
+        onClick={() => setPage('activity')}
+      >
+        <Bell className="size-5" />
       </RailItem>
 
       <div className="my-1 h-px w-8 bg-border" />

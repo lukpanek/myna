@@ -6,6 +6,7 @@ import { isCustomSound, playNotificationSound } from '@/features/notifications/s
 import { unreadTotals } from '@/features/shell/room-filters';
 import { t } from '@/i18n';
 import { useMatrixClient } from '@/matrix/context';
+import { thumbnailPath } from '@/matrix/media';
 import { useRooms } from '@/matrix/rooms-store';
 import { useSettings } from '@/store/settings';
 import { useUi } from '@/store/ui';
@@ -122,6 +123,19 @@ export function useTraySync(): void {
     syncTray();
     return useSettings.subscribe((s, prev) => {
       if (s.trayIcon !== prev.trayIcon || s.language !== prev.language) syncTray();
+    });
+  }, []);
+}
+
+/** Applies the web inspector setting to the main window; call once at the app root. */
+export function useWebInspectorSync(): void {
+  useEffect(() => {
+    if (!isTauri || import.meta.env.DEV) return;
+    const apply = (enabled: boolean) =>
+      invoke('set_web_inspector', { enabled }).catch((err) => console.warn('Web inspector toggle failed', err));
+    apply(useSettings.getState().webInspector);
+    return useSettings.subscribe((s, prev) => {
+      if (s.webInspector !== prev.webInspector) apply(s.webInspector);
     });
   }, []);
 }
@@ -243,6 +257,22 @@ function soundName(): string {
   return 'message-new-instant';
 }
 
+/** `media://` path of the chat avatar; the native side reads it from the media cache. */
+function notificationImage(mxc: string | undefined): string | undefined {
+  const thumb = mxc ? thumbnailPath(mxc, 80) : null;
+  if (!thumb) return undefined;
+  return `${thumb.path}?${new URLSearchParams(Object.entries(thumb.query).map(([k, v]) => [k, String(v)]))}`;
+}
+
+/** Message author; on macOS their avatar replaces the app icon (communication notification). */
+export interface NotificationSender {
+  id: string;
+  name: string;
+  avatarMxc?: string;
+  /** Group chat name; `undefined` in DMs. */
+  conversation?: string;
+}
+
 export async function showNotification(o: {
   title: string;
   body: string;
@@ -250,6 +280,9 @@ export async function showNotification(o: {
   /** Event to jump to when the notification is clicked. */
   eventId?: string;
   sound: boolean;
+  /** Chat picture shown beside the text (macOS desktop app). */
+  avatarMxc?: string;
+  sender?: NotificationSender;
 }): Promise<void> {
   if (!(await requestNotificationPermission())) return;
   // Custom sounds play in the app; the OS notification itself stays silent.
@@ -263,6 +296,13 @@ export async function showNotification(o: {
       body: o.body,
       sound: systemSound,
       group: o.roomId,
+      image: notificationImage(o.avatarMxc),
+      sender: o.sender && {
+        id: o.sender.id,
+        name: o.sender.name,
+        image: notificationImage(o.sender.avatarMxc),
+        conversation: o.sender.conversation,
+      },
     }).catch(() => false);
     if (!sent) {
       const { sendNotification } = await import('@tauri-apps/plugin-notification');

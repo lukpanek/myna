@@ -115,3 +115,30 @@ fn is_app_url(url: &Url) -> bool {
     _ => false,
   }
 }
+
+/// Web inspector in release builds (Settings → Developer options): right click →
+/// Inspect Element, and Safari's Develop menu. Debug builds always have it.
+#[tauri::command]
+pub fn set_web_inspector<R: Runtime>(window: tauri::WebviewWindow<R>, enabled: bool) {
+  if cfg!(debug_assertions) {
+    return;
+  }
+  #[cfg(target_os = "macos")]
+  let _ = window.with_webview(move |webview| unsafe {
+    use objc2::{msg_send, rc::Retained, runtime::AnyObject};
+    use objc2_foundation::{ns_string, NSNumber};
+
+    let wk = &*webview.inner().cast::<AnyObject>();
+    // `inspectable` exists from macOS 13.3; older versions only need the preference.
+    let responds: bool = msg_send![wk, respondsToSelector: objc2::sel!(setInspectable:)];
+    if responds {
+      let _: () = msg_send![wk, setInspectable: enabled];
+    }
+    let config: Retained<AnyObject> = msg_send![wk, configuration];
+    let preferences: Retained<AnyObject> = msg_send![&*config, preferences];
+    let value = NSNumber::new_bool(enabled);
+    let _: () = msg_send![&*preferences, setValue: &*value, forKey: ns_string!("developerExtrasEnabled")];
+  });
+  #[cfg(not(target_os = "macos"))]
+  let _ = (window, enabled);
+}

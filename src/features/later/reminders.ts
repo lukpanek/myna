@@ -5,6 +5,7 @@ import { t } from '@/i18n';
 import { isWindowFocused, showNotification } from '@/lib/native';
 import { describeEvent } from '@/matrix/event-text';
 import { markRoomUnread } from '@/matrix/room-actions';
+import { useRooms } from '@/matrix/rooms-store';
 import { useSettings } from '@/store/settings';
 import { useUi } from '@/store/ui';
 
@@ -96,6 +97,7 @@ function fire(client: MatrixClient, reminder: Reminder) {
       roomId: reminder.roomId,
       eventId: reminder.eventId,
       sound: useSettings.getState().notifications.sound,
+      avatarMxc: useRooms.getState().rooms[reminder.roomId]?.avatarMxc,
     }).catch(() => undefined);
   }
 }

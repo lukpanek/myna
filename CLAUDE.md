@@ -17,5 +17,9 @@ structure; it lists module contracts and UX rules.
   cache), cookie login webview, notifications.
 - macOS notifications need a signed bundle: `pnpm tauri dev` runs the binary inside
   `target/debug/Myna Dev.app` (`src-tauri/scripts/dev-runner.sh`), signed with
-  `$APPLE_SIGNING_IDENTITY` (ad-hoc builds get denied).
+  `$APPLE_SIGNING_IDENTITY` (ad-hoc builds get denied). With
+  `src-tauri/profiles/myna-dev.provisionprofile` (gitignored, team MNV3XN75FD) it also
+  gets the communication-notifications entitlement: sender avatar instead of the app icon.
+  `src-tauri/scripts/build-personal.sh` does the same for a release build (`app.myna.desktop`,
+  profile `profiles/myna.provisionprofile`), for the developer's own Mac only.
 - License: AGPL-3.0-only (code ported from Sable/Cinny and mautrix-manager).

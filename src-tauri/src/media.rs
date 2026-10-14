@@ -297,34 +297,38 @@ async fn serve(
   range: Option<String>,
 ) -> Result<Response<Vec<u8>>, StatusCode> {
   let target = Target::parse(request.uri()).ok_or(StatusCode::BAD_REQUEST)?;
-  let dir = state.cache_dir.get().ok_or(StatusCode::INTERNAL_SERVER_ERROR)?.clone();
-  let key = target.cache_key();
-
-  let entry = match read_cached(&dir, &key) {
-    Some(entry) => entry,
-    None => {
-      if let Some(status) = state.recent_failure(&key) {
-        return Err(status);
-      }
-      let gate = state.gate(&key);
-      let _guard = gate.lock().await;
-      // Another request may have filled the cache while we waited for the gate.
-      match read_cached(&dir, &key) {
-        Some(entry) => entry,
-        None => match fetch(state, &target, &dir, &key).await {
-          Ok(entry) => entry,
-          Err(status) => {
-            state.note_failure(&key, status);
-            return Err(status);
-          }
-        },
-      }
-    }
-  };
-
+  let entry = resolve(state, &target).await?;
   tauri::async_runtime::spawn_blocking(move || read_response(&entry, range.as_deref()))
     .await
     .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?
+}
+
+/// The cached file for `target`, downloaded first when missing.
+async fn resolve(state: &MediaState, target: &Target) -> Result<CacheEntry, StatusCode> {
+  let dir = state.cache_dir.get().ok_or(StatusCode::INTERNAL_SERVER_ERROR)?.clone();
+  let key = target.cache_key();
+  if let Some(entry) = read_cached(&dir, &key) {
+    return Ok(entry);
+  }
+  if let Some(status) = state.recent_failure(&key) {
+    return Err(status);
+  }
+  let gate = state.gate(&key);
+  let _guard = gate.lock().await;
+  // Another request may have filled the cache while we waited for the gate.
+  if let Some(entry) = read_cached(&dir, &key) {
+    return Ok(entry);
+  }
+  fetch(state, target, &dir, &key).await.inspect_err(|&status| state.note_failure(&key, status))
+}
+
+/// Local file and content type for a protocol path (`thumbnail/{server}/{mediaId}?…`),
+/// for native consumers such as notification images.
+pub async fn cached_file(state: &MediaState, path: &str) -> Option<(PathBuf, String)> {
+  let uri: tauri::http::Uri = format!("{SCHEME}://localhost/{path}").parse().ok()?;
+  let target = Target::parse(&uri)?;
+  let entry = resolve(state, &target).await.ok()?;
+  Some((entry.body, entry.content_type))
 }
 
 async fn fetch(state: &MediaState, target: &Target, dir: &Path, key: &str) -> Result<CacheEntry, StatusCode> {

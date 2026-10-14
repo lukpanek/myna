@@ -3,6 +3,12 @@
 # "Myna Dev.app", because UNUserNotificationCenter refuses processes without a
 # bundle. Signs with $APPLE_SIGNING_IDENTITY (ad-hoc otherwise, which macOS
 # denies notifications for). Other binaries (tests) run unchanged.
+#
+# With a development provisioning profile for app.myna.dev in
+# profiles/myna-dev.provisionprofile (or $MYNA_DEV_PROVISIONING_PROFILE) the
+# bundle embeds it and is signed with its entitlements, which enables
+# communication notifications (sender avatar instead of the app icon). The
+# signing identity must then belong to the profile's team.
 set -e
 bin="$1"
 shift
@@ -27,9 +33,19 @@ cat > "$app/Contents/Info.plist" <<PLIST
   <key>CFBundleShortVersionString</key><string>0.0.0</string>
   <key>CFBundleVersion</key><string>0</string>
   <key>NSHighResolutionCapable</key><true/>
+  <key>NSUserActivityTypes</key><array><string>INSendMessageIntent</string></array>
 </dict>
 </plist>
 PLIST
-codesign --force --sign "${APPLE_SIGNING_IDENTITY:--}" "$app" 2>/dev/null ||
+profile="${MYNA_DEV_PROVISIONING_PROFILE:-$root/profiles/myna-dev.provisionprofile}"
+entitlements=""
+if [ -f "$profile" ] && [ -n "$APPLE_SIGNING_IDENTITY" ]; then
+  cp "$profile" "$app/Contents/embedded.provisionprofile"
+  entitlements="$(dirname "$bin")/myna-dev.entitlements"
+  security cms -D -i "$profile" | plutil -extract Entitlements xml1 -o "$entitlements" -
+else
+  rm -f "$app/Contents/embedded.provisionprofile"
+fi
+codesign --force --sign "${APPLE_SIGNING_IDENTITY:--}" ${entitlements:+--entitlements "$entitlements"} "$app" 2>/dev/null ||
   echo "dev-runner: codesign failed, notifications will not work" >&2
 exec "$app/Contents/MacOS/myna" "$@"

@@ -40,6 +40,12 @@ network. Beeper-like account handling, Slack-like UX. UI languages: Czech, Slova
   then real Matrix spaces. Bridge-generated personal spaces are *not* shown as
   spaces; they define **accounts** inside a network (account dropdown in the
   sidebar header when a network has more than one login).
+- **Activity** (bell under "Vše", page `activity`) = Slack's Activity: the feed replaces the sidebar,
+  the chosen item opens in the room view next to it (threads in the right panel). Items: newest
+  incoming DM message per DM, mentions, replies to the user, newest reply in threads the user
+  started or joined, reactions to the user's messages (grouped per message). Built from loaded
+  events only (no server notifications API); grouped by day, tabs Vše/DMs/Zmínky/Vlákna/Reakce,
+  unread filter, per-item read check (read receipt on the item's newest event).
 - **Network badge** on the avatar in every list where networks mix (Vše, ⌘K,
   notifications) — the Beeper "where is this from" cue.
 - Sidebar rows: avatar (round = person, rounded square = group), bold name when
@@ -65,10 +71,10 @@ network. Beeper-like account handling, Slack-like UX. UI languages: Czech, Slova
 
 ## UI state (src/store)
 
-- `ui.ts` — `useUi`: view, page (`chat | bridges`), roomId, rightPanel
+- `ui.ts` — `useUi`: view, page (`chat | activity | bridges`), activity tab/unread filter/width, roomId, rightPanel
   (`details | thread | user`; a profile remembers the panel it was opened from), settings dialog, ⌘K, `focusEventId` (jump to event).
 - `settings.ts` — `useSettings` (persisted): theme, density, font size,
-  system events, read receipts, `sendWithShift`, recent emoji, notifications
+  system events, read receipts, `sendWithShift`, recent emoji, `quickReactions` (null = recent), notifications
   (enabled, sound, soundId, soundVolume, showContent, pausedUntil, per-network defaults), bridge URLs.
 
 ## Module contracts
@@ -88,6 +94,8 @@ network. Beeper-like account handling, Slack-like UX. UI languages: Czech, Slova
 | `features/crypto/crypto-prompts.tsx` | `CryptoPrompts()` | settings |
 | `features/bridges/bridges-page.tsx` | `BridgesPage()` | bridges |
 | `features/new-chat/new-chat-dialog.tsx` | `NewChatDialog({ open, onOpenChange })` | bridges |
+| `features/activity/activity.ts` | `useActivity`, `attachActivity(client)`, `matchesTab`, `activityBadge`, `markActivityRead` | activity |
+| `features/activity/activity-feed.tsx` | `ActivityFeed()` (left column of the activity page) | activity |
 | `features/later/reminders.ts` | `useReminders`, `attachReminders(client)`; account data `cz.myna.reminders` | later |
 | `features/later/scheduled.ts` | `useScheduled` (localStorage), `attachScheduledSender(client)` | later |
 | `features/search/search.ts` | `searchServer`, `searchLoaded`, `historyScanner(client, roomId)`, `mergeHits` | search |
@@ -102,7 +110,7 @@ network. Beeper-like account handling, Slack-like UX. UI languages: Czech, Slova
 useNativeIntegration(): void            // media session, dock badge + tray count, focus tracking
 useTraySync(): void                     // tray icon on/off + menu labels (app root)
 getAutostart(): Promise<boolean>; setAutostart(enabled: boolean): Promise<void>
-showNotification(o: { title: string; body: string; roomId: string; eventId?: string; sound: boolean }): Promise<void>
+showNotification(o: { title: string; body: string; roomId: string; eventId?: string; sound: boolean; avatarMxc?: string; sender?: NotificationSender }): Promise<void>
 isWindowFocused(): boolean
 openExternal(url: string): Promise<void>
 cookieLogin(o: { url: string; userAgent?: string; cookies: { name: string; domain?: string }[];
@@ -114,7 +122,7 @@ cookieLogin(o: { url: string; userAgent?: string; cookies: { name: string; domai
 - Slack timeline: left-aligned messages, avatar + name on the first message of
   a group (same sender, < 5 min), hover shows time in the gutter. Sticky day
   dividers ("Dnes", "Včera", "pondělí 6. října"). Red "Nové" line at the read
-  marker. Hover toolbar: 3 recent emoji, add reaction, reply, thread, ⋯ menu.
+  marker. Hover toolbar: 3 quick reactions (recent emoji, or a fixed set from Nastavení → Chaty), add reaction, reply, thread, ⋯ menu.
 - Reactions are pills under the message; own reaction outlined in primary.
 - Primary colour matches the logo blue (`#2B59C3`, `oklch(0.5 0.17 264)`). Login offers preset
   homeservers (matrix.org, mozilla.org) in an editable combobox, probes login flows and shows SSO only when offered.
