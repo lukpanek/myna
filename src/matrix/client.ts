@@ -128,11 +128,29 @@ async function doStart(session: Session): Promise<MatrixClient> {
   });
 
   current = client;
+  addEventListener('online', retrySync);
+  addEventListener('focus', retrySync);
+  document.addEventListener('visibilitychange', retrySync);
   return client;
+}
+
+/**
+ * After sleep or a network change the SDK waits out its backoff before the next
+ * sync; returning to the window or regaining the network retries immediately.
+ */
+function retrySync(): void {
+  current?.retryImmediately();
+}
+
+function removeRetryListeners(): void {
+  removeEventListener('online', retrySync);
+  removeEventListener('focus', retrySync);
+  document.removeEventListener('visibilitychange', retrySync);
 }
 
 export async function stopClient(): Promise<void> {
   if (!current) return;
+  removeRetryListeners();
   current.stopClient();
   current = null;
 }
@@ -145,6 +163,7 @@ export async function logout(): Promise<void> {
   } catch {
     // Token may already be invalid; local cleanup still has to happen.
   }
+  removeRetryListeners();
   client?.stopClient();
   await client?.clearStores().catch(() => undefined);
   current = null;

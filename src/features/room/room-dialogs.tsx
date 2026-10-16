@@ -4,6 +4,7 @@ import { Dialog as DialogPrimitive } from 'radix-ui';
 import { type ComponentProps, useEffect, useState } from 'react';
 import { toast } from 'sonner';
 import { create } from 'zustand';
+import { usePortalContainer } from '@/components/portal-container';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -14,17 +15,24 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { t } from '@/i18n';
+import { usePopoutScope } from '@/features/popout/popout-scope';
 import { isMac, isTauri } from '@/lib/platform';
+import { getActiveScope } from '@/lib/popout';
 import { cn } from '@/lib/utils';
 import { useMatrixClient } from '@/matrix/context';
 import { type EncryptedFile, useMediaSrc } from '@/matrix/media';
+import { EditHistoryDialog } from './edit-history-dialog';
 import { downloadMedia } from './media-utils';
 
 interface DialogsState {
+  /** Window the open dialog belongs to: a pop-out's room id, null = main window. */
+  scope: string | null;
   sourceEvent: MatrixEvent | null;
+  historyEvent: MatrixEvent | null;
   redactEvent: MatrixEvent | null;
   lightbox: { items: MatrixEvent[]; index: number } | null;
   showSource: (event: MatrixEvent | null) => void;
+  showHistory: (event: MatrixEvent | null) => void;
   confirmRedact: (event: MatrixEvent | null) => void;
   openLightbox: (items: MatrixEvent[], event: MatrixEvent) => void;
   closeLightbox: () => void;
@@ -33,14 +41,17 @@ interface DialogsState {
 
 /** Room-level dialogs opened from message rows (main timeline and thread panel share them). */
 export const useRoomDialogs = create<DialogsState>((set) => ({
+  scope: null,
   sourceEvent: null,
+  historyEvent: null,
   redactEvent: null,
   lightbox: null,
-  showSource: (sourceEvent) => set({ sourceEvent }),
-  confirmRedact: (redactEvent) => set({ redactEvent }),
+  showSource: (sourceEvent) => set({ sourceEvent, scope: getActiveScope() }),
+  showHistory: (historyEvent) => set({ historyEvent, scope: getActiveScope() }),
+  confirmRedact: (redactEvent) => set({ redactEvent, scope: getActiveScope() }),
   openLightbox: (items, event) => {
     const index = items.indexOf(event);
-    set({ lightbox: index >= 0 ? { items, index } : { items: [event], index: 0 } });
+    set({ lightbox: index >= 0 ? { items, index } : { items: [event], index: 0 }, scope: getActiveScope() });
   },
   closeLightbox: () => set({ lightbox: null }),
   stepLightbox: (delta) =>
@@ -53,9 +64,14 @@ export const useRoomDialogs = create<DialogsState>((set) => ({
 }));
 
 export function RoomDialogs() {
+  const scope = usePopoutScope()?.roomId ?? null;
+  const mine = useRoomDialogs((s) => s.scope === scope);
+  // The main window and a pop-out both render these; only the window the dialog was opened from shows it.
+  if (!mine) return null;
   return (
     <>
       <SourceDialog />
+      <HistoryDialog />
       <RedactDialog />
       <Lightbox />
     </>
@@ -90,6 +106,12 @@ function SourceDialog() {
       </DialogContent>
     </Dialog>
   );
+}
+
+function HistoryDialog() {
+  const event = useRoomDialogs((s) => s.historyEvent);
+  const close = useRoomDialogs((s) => s.showHistory);
+  return <EditHistoryDialog event={event} onClose={() => close(null)} />;
 }
 
 function RedactDialog() {
@@ -142,6 +164,7 @@ function Lightbox() {
   const event = lightbox ? lightbox.items[lightbox.index] : null;
   const hasPrev = !!lightbox && lightbox.index > 0;
   const hasNext = !!lightbox && lightbox.index < lightbox.items.length - 1;
+  const win = usePopoutScope()?.win ?? window;
 
   useEffect(() => {
     if (!lightbox) return;
@@ -149,13 +172,13 @@ function Lightbox() {
       if (e.key === 'ArrowLeft') step(-1);
       else if (e.key === 'ArrowRight') step(1);
     };
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, [lightbox, step]);
+    win.addEventListener('keydown', onKey);
+    return () => win.removeEventListener('keydown', onKey);
+  }, [lightbox, step, win]);
 
   return (
     <DialogPrimitive.Root open={!!event} onOpenChange={(open) => !open && close()}>
-      <DialogPrimitive.Portal>
+      <DialogPrimitive.Portal container={usePortalContainer()}>
         <DialogPrimitive.Overlay className="fixed inset-0 z-50 bg-black/90 data-[state=open]:animate-in data-[state=open]:fade-in-0" />
         <DialogPrimitive.Content
           aria-describedby={undefined}

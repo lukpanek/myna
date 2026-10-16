@@ -46,12 +46,21 @@ function onFocusGained() {
 }
 
 function externalHref(target: EventTarget | null): string | null {
-  const anchor = target instanceof Element ? target.closest('a[href]') : null;
-  if (!(anchor instanceof HTMLAnchorElement)) return null;
+  // Duck-typed: elements of a chat pop-out come from that window's realm, so `instanceof` fails.
+  const el = target as Element | null;
+  const anchor = typeof el?.closest === 'function' ? (el.closest('a[href]') as HTMLAnchorElement | null) : null;
+  if (!anchor) return null;
   const url = anchor.href;
   if (!/^(https?:|mailto:)/i.test(url)) return null;
   if (url.startsWith(window.location.origin + '/')) return null;
   return url;
+}
+
+/** Opens web links clicked inside `doc` (a chat pop-out) in the browser, like in the main window. */
+export function interceptExternalLinks(doc: Document): void {
+  if (!isTauri) return;
+  doc.addEventListener('click', onLinkClick);
+  doc.addEventListener('auxclick', onLinkClick);
 }
 
 function onLinkClick(e: MouseEvent) {

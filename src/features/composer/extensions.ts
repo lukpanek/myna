@@ -99,8 +99,11 @@ function suggestionRender(sink: SuggestionSink, pluginKey: PluginKey) {
     };
     return {
       onStart: (props: SuggestionProps<SuggestionEntry, never>) => {
-        el = document.createElement('div');
+        // The editor's own document: in a chat pop-out the popup has to open there, not in the main window.
+        const doc = props.editor.view.dom.ownerDocument;
+        el = doc.createElement('div');
         el.style.zIndex = '50';
+        doc.body.append(el);
         unmount = props.mount(el);
         push(props);
       },
@@ -108,6 +111,7 @@ function suggestionRender(sink: SuggestionSink, pluginKey: PluginKey) {
       onExit: () => {
         unmount?.();
         unmount = null;
+        el?.remove();
         el = null;
         sink(null);
       },

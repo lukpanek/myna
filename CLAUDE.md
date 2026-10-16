@@ -16,10 +16,14 @@ structure; it lists module contracts and UX rules.
 - Native side (`src-tauri/`): `media://` protocol (authenticated media + disk
   cache), cookie login webview, notifications.
 - macOS notifications need a signed bundle: `pnpm tauri dev` runs the binary inside
-  `target/debug/Myna Dev.app` (`src-tauri/scripts/dev-runner.sh`), signed with
-  `$APPLE_SIGNING_IDENTITY` (ad-hoc builds get denied). With
-  `src-tauri/profiles/myna-dev.provisionprofile` (gitignored, team MNV3XN75FD) it also
-  gets the communication-notifications entitlement: sender avatar instead of the app icon.
+  `target/debug/Myna Dev.app` (`src-tauri/scripts/dev-runner.sh`). With
+  `src-tauri/profiles/myna-dev.provisionprofile` (gitignored, team MNV3XN75FD) it is signed with
+  that profile's certificate (picked from the profile, not `$APPLE_SIGNING_IDENTITY`; a mismatch gets
+  the app SIGKILLed by AMFI) and gets the communication-notifications entitlement: sender avatar
+  instead of the app icon. Without the profile it signs with `$APPLE_SIGNING_IDENTITY` (ad-hoc builds
+  get denied notifications).
   `src-tauri/scripts/build-personal.sh` does the same for a release build (`app.myna.desktop`,
   profile `profiles/myna.provisionprofile`), for the developer's own Mac only.
+- Updates: `src-tauri/scripts/release.sh` builds via build-personal.sh and publishes a GitHub release
+  with `latest.json`; the updater key is `~/.tauri/myna.key` (public half in tauri.conf.json).
 - License: AGPL-3.0-only (code ported from Sable/Cinny and mautrix-manager).

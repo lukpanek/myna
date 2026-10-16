@@ -16,6 +16,7 @@ import {
   requestNotificationPermission,
   showNotification,
 } from '@/lib/native';
+import { isPopoutFocused } from '@/lib/popout';
 import { isBackfill } from '@/matrix/backfill';
 import { isOwnGhost } from '@/matrix/bridge';
 import { useMatrixClient } from '@/matrix/context';
@@ -97,6 +98,7 @@ function evaluate(client: MatrixClient, event: MatrixEvent, room: Room): Candida
   if (isWindowFocused() && useUi.getState().page !== 'bridges' && useUi.getState().roomId === room.roomId) {
     return null;
   }
+  if (isPopoutFocused(room.roomId)) return null;
 
   const senderId = event.getSender() ?? '';
   // Sent from the user's own phone through the bridge.

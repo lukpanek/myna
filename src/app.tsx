@@ -6,8 +6,10 @@ import { TooltipProvider } from '@/components/ui/tooltip';
 import { LoginPage, consumeSsoRedirect } from '@/features/auth/login-page';
 import { AppShell } from '@/features/shell/app-shell';
 import { type MessageKey, t, useLocale } from '@/i18n';
+import { useGlobalShortcut } from '@/lib/global-shortcut';
 import { useTraySync, useWebInspectorSync } from '@/lib/native';
 import { useApplyTheme } from '@/lib/theme';
+import { useUpdateChecks } from '@/lib/updater';
 import { logout, startClient } from '@/matrix/client';
 import { MatrixProvider } from '@/matrix/context';
 import { loadSession, type Session } from '@/matrix/session';
@@ -22,6 +24,8 @@ export function App() {
   useApplyTheme();
   useTraySync();
   useWebInspectorSync();
+  useUpdateChecks();
+  useGlobalShortcut();
   // Switching language remounts the UI below (state lives in stores), so every t() call re-runs.
   const locale = useLocale();
   const [session, setSession] = useState<Session | null>(() => loadSession());

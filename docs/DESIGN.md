@@ -103,6 +103,13 @@ network. Beeper-like account handling, Slack-like UX. UI languages: Czech, Slova
 | `features/room/link-preview.tsx` | `LinkPreviews({ content, ts })`, `embedFor(url)` | timeline |
 | `features/details/room-settings-dialog.tsx` | `RoomSettingsDialog`, `InviteDialog`, `roomPermissions` | settings |
 | `lib/native.ts` | native integration (below) | native |
+| `matrix/connection.ts` | `useConnection` (state, restored, unsent), `attachConnection(client)`, `isQueued(event)` | native |
+| `features/shell/connection-banner.tsx` | `ConnectionBanner()` (offline / server down / back online) | native |
+| `lib/updater.ts` | `useUpdater`, `checkForUpdates`, `installUpdate`, `useUpdateChecks()` | native |
+| `lib/global-shortcut.ts` | `useGlobalShortcut()`, `GLOBAL_SHORTCUTS`, `formatShortcut` | native |
+| `lib/popout.ts` | `usePopouts`, `openPopout(roomId, title)`, `closePopout`, `getActiveScope`, `isPopoutFocused` | native |
+| `features/popout/popout-host.tsx` | `PopoutHost()` (portals each pop-out's `RoomView`) | native |
+| `features/room/edit-history-dialog.tsx` | `EditHistoryDialog({ event, onClose })` | timeline |
 
 `lib/native.ts`:
 
@@ -149,4 +156,18 @@ cookieLogin(o: { url: string; userAgent?: string; cookies: { name: string; domai
   list, scaling) · Chaty (what shows in a conversation, bridge history) · Notifikace · Účet a
   zabezpečení (profile, encryption, sessions, logout) · Přístupnost. A setting goes where the user
   would look for its effect, not where it is implemented.
+- Connection: sync errors or `navigator.onLine === false` lasting 4 s show an amber strip under the top
+  bar ("Bez připojení" / "Server neodpovídá", unsent count, retry). Messages that failed for lack of
+  connection read "Čeká na připojení" (not red) and are resent when sync recovers; other failures
+  keep "Neodesláno · Zkusit znovu".
+- "(upraveno)" is a button: edit history dialog (all `m.replace` versions, newest first).
+- Chat pop-outs ("Otevřít v novém okně" in the room header and row menu): `window.open('about:blank')`
+  creates a native window sharing the main webview's WebKit config (`window.rs`), and `PopoutHost`
+  portals `RoomView` into it, so the client, crypto and stores are shared. Rules for code that may
+  render there: Radix portals use `usePortalContainer()`; no `instanceof HTMLElement` (other realm);
+  frames/listeners via `viewOf(node)` / `usePopoutScope()`. The right panel stays in the main window:
+  threads, profiles and details opened in a pop-out show there next to the same chat.
+- Updates: Settings → Obecné → O aplikaci; background check at launch and every 6 h, install waits for
+  the user. Releases: `src-tauri/scripts/release.sh` (GitHub Releases, `latest.json`).
+- Global shortcut (default ⌥⌘M, Settings → Obecné → Systém) brings Myna forward with ⌘K open.
 - Keep it light: virtualized lists, `content-visibility` on messages, no heavy deps.

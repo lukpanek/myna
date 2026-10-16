@@ -1,4 +1,5 @@
 import { EventStatus, type MatrixEvent, type Room, ThreadEvent } from 'matrix-js-sdk';
+import { Clock } from 'lucide-react';
 import { memo, useState } from 'react';
 import relativeTime from 'dayjs/plugin/relativeTime';
 import { MxAvatar } from '@/components/mx-avatar';
@@ -6,12 +7,14 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip
 import { t } from '@/i18n';
 import { dayjs, formatFullTime, formatMessageTime } from '@/lib/time';
 import { cn } from '@/lib/utils';
+import { isQueued, useConnection } from '@/matrix/connection';
 import { useMatrixClient } from '@/matrix/context';
 import { useRerenderOn } from '@/matrix/hooks';
 import { openUserProfile, useUi } from '@/store/ui';
 import { HoverToolbar } from './message-actions';
 import { MessageContent } from './message-content';
 import { Reactions } from './reactions';
+import { useRoomDialogs } from './room-dialogs';
 import { ReplyQuote } from './reply-quote';
 import { useTimelineContext } from './timeline-context';
 import { describeSystemEvent, displaySender, isPending, memberName, senderName } from './timeline-utils';
@@ -72,6 +75,8 @@ function ChatRow({ room, event, continuation, receipts, highlighted, hideThreadS
   const ts = event.getTs();
   const pending = isPending(event);
   const failed = event.status === EventStatus.NOT_SENT;
+  // Failed for lack of connection: the outbox resends it, so it reads as waiting, not as an error.
+  const queued = failed && isQueued(event);
   const replyId = event.replyEventId;
   // In threads the SDK adds a fallback reply to the previous message; it is not a real reply.
   const isFallbackReply = !!event.getWireContent()['m.relates_to']?.is_falling_back;
@@ -119,7 +124,7 @@ function ChatRow({ room, event, continuation, receipts, highlighted, hideThreadS
           </button>
         )}
       </div>
-      <div className={cn('min-w-0 flex-1', receipts && 'pr-14', pending && !failed && 'opacity-60')}>
+      <div className={cn('min-w-0 flex-1', receipts && 'pr-14', pending && (!failed || queued) && 'opacity-60')}>
         {!continuation && (
           <div className="flex items-baseline gap-2">
             <button
@@ -144,17 +149,19 @@ function ChatRow({ room, event, continuation, receipts, highlighted, hideThreadS
             senderName={name}
             suffix={
               replacing && !event.isRedacted() ? (
-                <span
-                  className="ml-1 text-xs text-muted-foreground select-none"
-                  title={t('room.editedAt', { time: formatFullTime(replacing.getTs()) })}
+                <button
+                  type="button"
+                  onClick={() => useRoomDialogs.getState().showHistory(event)}
+                  className="ml-1 cursor-pointer text-xs text-muted-foreground select-none hover:text-foreground hover:underline"
+                  title={`${t('room.editedAt', { time: formatFullTime(replacing.getTs()) })} · ${t('room.editHistoryShow')}`}
                 >
                   {t('room.editedMarker')}
-                </span>
+                </button>
               ) : null
             }
           />
         </div>
-        {failed && <SendFailed room={room} event={event} />}
+        {failed && (queued ? <SendQueued room={room} event={event} /> : <SendFailed room={room} event={event} />)}
         {!event.isRedacted() && !pending && <Reactions room={room} event={event} />}
         {!hideThreadSummary && !threadId && event.getId() && <ThreadSummary room={room} rootId={event.getId()!} />}
       </div>
@@ -172,6 +179,25 @@ function SendFailed({ room, event }: { room: Room; event: MatrixEvent }) {
       <span>·</span>
       <button type="button" className="hover:underline" onClick={() => void client.resendEvent(event, room).catch(() => undefined)}>
         {t('common.retry')}
+      </button>
+      <span>·</span>
+      <button type="button" className="hover:underline" onClick={() => client.cancelPendingEvent(event)}>
+        {t('room.discard')}
+      </button>
+    </div>
+  );
+}
+
+function SendQueued({ room, event }: { room: Room; event: MatrixEvent }) {
+  const client = useMatrixClient();
+  const online = useConnection((s) => s.state === 'online');
+  return (
+    <div className="mt-0.5 flex items-center gap-1.5 text-xs text-muted-foreground">
+      <Clock className="size-3" />
+      <span className="font-medium">{online ? t('room.sendQueuedRetrying') : t('room.sendQueued')}</span>
+      <span>·</span>
+      <button type="button" className="hover:underline" onClick={() => void client.resendEvent(event, room).catch(() => undefined)}>
+        {t('room.sendNow')}
       </button>
       <span>·</span>
       <button type="button" className="hover:underline" onClick={() => client.cancelPendingEvent(event)}>

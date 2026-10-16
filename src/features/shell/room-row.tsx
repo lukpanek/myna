@@ -18,6 +18,7 @@ import {
 import { pickReminder, removeReminder, useReminders } from '@/features/later/reminders';
 import { formatWhen } from '@/features/later/when';
 import { t } from '@/i18n';
+import { openPopout } from '@/lib/popout';
 import { formatListTime } from '@/lib/time';
 import { cn } from '@/lib/utils';
 import { useMatrixClient } from '@/matrix/context';
@@ -192,6 +193,9 @@ function RoomContextMenu({ room, children }: { room: RoomSummary; children: Reac
           </ContextMenuSubContent>
         </ContextMenuSub>
         <ContextMenuSeparator />
+        {room.membership === 'join' && (
+          <ContextMenuItem onSelect={() => openPopout(room.roomId, room.name)}>{t('desktop.openInWindow')}</ContextMenuItem>
+        )}
         <ContextMenuItem
           onSelect={() => {
             void navigator.clipboard.writeText(roomPermalink(room.roomId));

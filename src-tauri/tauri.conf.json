@@ -1,7 +1,7 @@
 {
   "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
   "productName": "Myna",
-  "version": "0.1.0",
+  "version": "../package.json",
   "identifier": "app.myna.desktop",
   "build": {
     "frontendDist": "../dist",
@@ -13,6 +13,7 @@
     "windows": [
       {
         "label": "main",
+        "create": false,
         "title": "Myna",
         "width": 1280,
         "height": 820,
@@ -24,7 +25,8 @@
         "titleBarStyle": "Overlay",
         "hiddenTitle": true,
         "trafficLightPosition": { "x": 16, "y": 20 },
-        "dragDropEnabled": false
+        "dragDropEnabled": false,
+        "backgroundThrottling": "disabled"
       }
     ],
     "security": {
@@ -47,6 +49,15 @@
     "macOS": {
       "minimumSystemVersion": "13.0",
       "signingIdentity": "-"
+    },
+    "createUpdaterArtifacts": true
+  },
+  "plugins": {
+    "updater": {
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IERFNUY1QTE4Nzc2REQ2RjAKUldUdzFtMTNHRnBmM3VHRmRVeUt6cHpaVGd3TjJlNGJ4MGNIRlVYYlFjeEYyYXJNMnltYkNIWGwK",
+      "endpoints": [
+        "https://github.com/lukpanek/myna/releases/latest/download/latest.json"
+      ]
     }
   }
 }

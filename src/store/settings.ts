@@ -47,6 +47,10 @@ export interface Settings {
   sendWithShift: boolean;
   /** Web inspector in release builds (right click → Inspect Element). */
   webInspector: boolean;
+  /** Looks for new versions on GitHub Releases in the background. */
+  autoUpdateCheck: boolean;
+  /** System-wide shortcut (Tauri accelerator) that brings Myna forward with ⌘K; null = off. */
+  globalShortcut: string | null;
   recentEmoji: string[];
   /** Emoji in the message hover toolbar; null = the most recently used ones. */
   quickReactions: string[] | null;
@@ -125,6 +129,8 @@ export const useSettings = create<Settings & SettingsActions>()(
       trayIcon: true,
       sendWithShift: false,
       webInspector: false,
+      autoUpdateCheck: true,
+      globalShortcut: 'CommandOrControl+Alt+M',
       recentEmoji: DEFAULT_RECENT_EMOJI,
       quickReactions: null,
       markBridgeHistoryRead: true,

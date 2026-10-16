@@ -21,6 +21,9 @@ pub fn run() {
       tauri_plugin_autostart::MacosLauncher::LaunchAgent,
       Some(vec![tray::AUTOSTART_ARG]),
     ))
+    .plugin(tauri_plugin_global_shortcut::Builder::new().build())
+    .plugin(tauri_plugin_updater::Builder::new().build())
+    .plugin(tauri_plugin_process::init())
     .manage(tray::TrayState::default());
 
   #[cfg(desktop)]
@@ -30,7 +33,8 @@ pub fn run() {
       .with_state_flags(
         tauri_plugin_window_state::StateFlags::all() & !tauri_plugin_window_state::StateFlags::VISIBLE,
       )
-      .with_denylist(&["cookie-login"])
+      // Pop-outs are per chat and short-lived; their numbered labels mean nothing next launch.
+      .with_filter(|label| label != "cookie-login" && !label.starts_with(window::POPOUT_PREFIX))
       .build(),
   );
 
@@ -50,6 +54,7 @@ pub fn run() {
       notifications::notification_permission,
       notifications::native_notify,
       window::set_web_inspector,
+      window::title_bar_mouse_down,
       #[cfg(desktop)]
       tray::update_tray,
     ])
@@ -62,7 +67,10 @@ pub fn run() {
             .build(),
         )?;
       }
+      window::create_main(app.handle())?;
       media::init(app.handle());
+      #[cfg(target_os = "macos")]
+      window::disable_app_nap();
       #[cfg(desktop)]
       tray::hide_main_on_autostart(app.handle());
       Ok(())

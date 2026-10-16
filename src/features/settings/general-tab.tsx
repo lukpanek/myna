@@ -1,4 +1,4 @@
-import { Check, Copy, Eye, EyeOff, Keyboard } from 'lucide-react';
+import { Check, Copy, Download, Eye, EyeOff, Keyboard, Loader2, RefreshCw } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
@@ -7,8 +7,11 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { LOCALES, systemLocale, t } from '@/i18n';
 import { tn } from '@/i18n/rich';
+import { formatShortcut, GLOBAL_SHORTCUTS } from '@/lib/global-shortcut';
 import { getAutostart, setAutostart } from '@/lib/native';
 import { isMac, isTauri, modKey } from '@/lib/platform';
+import { formatFullTime } from '@/lib/time';
+import { checkForUpdates, installUpdate, updatesSupported, useUpdater } from '@/lib/updater';
 import { useMatrixClient } from '@/matrix/context';
 import { type LanguagePref, useSettings } from '@/store/settings';
 import { useUi } from '@/store/ui';
@@ -153,7 +156,35 @@ function SystemSection() {
         checked={trayIcon}
         onCheckedChange={(value) => set({ trayIcon: value })}
       />
+      <GlobalShortcutRow />
     </Section>
+  );
+}
+
+const SHORTCUT_OFF = 'off';
+
+function GlobalShortcutRow() {
+  const shortcut = useSettings((s) => s.globalShortcut);
+  const set = useSettings((s) => s.set);
+  return (
+    <Row label={t('desktop.globalShortcut')} description={t('desktop.globalShortcutDescription')}>
+      <Select
+        value={shortcut ?? SHORTCUT_OFF}
+        onValueChange={(v) => set({ globalShortcut: v === SHORTCUT_OFF ? null : v })}
+      >
+        <SelectTrigger className="w-40">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value={SHORTCUT_OFF}>{t('desktop.globalShortcutOff')}</SelectItem>
+          {GLOBAL_SHORTCUTS.map((s) => (
+            <SelectItem key={s} value={s}>
+              {formatShortcut(s)}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+    </Row>
   );
 }
 
@@ -164,11 +195,70 @@ function AboutSection() {
       <Row label={t('settings.version')}>
         <span className="font-mono text-[13px] text-muted-foreground select-text">{version}</span>
       </Row>
+      {updatesSupported && <UpdateRows />}
       <Row label={t('settings.license')}>
         <span className="text-sm text-muted-foreground">AGPL-3.0</span>
       </Row>
       <p className="mt-2 text-[13px] text-muted-foreground">{t('settings.creditsText')}</p>
     </Section>
+  );
+}
+
+function UpdateRows() {
+  const status = useUpdater((s) => s.status);
+  const autoCheck = useSettings((s) => s.autoUpdateCheck);
+  const set = useSettings((s) => s.set);
+
+  let description: string;
+  switch (status.kind) {
+    case 'checking':
+      description = t('desktop.updateChecking');
+      break;
+    case 'upToDate':
+      description = t('desktop.updateUpToDate', { time: formatFullTime(status.checkedAt) });
+      break;
+    case 'available':
+      description = t('desktop.updateAvailable', { version: status.version });
+      break;
+    case 'downloading':
+      description =
+        status.progress === null
+          ? t('desktop.updateDownloading')
+          : t('desktop.updateDownloadingProgress', { percent: Math.round(status.progress * 100) });
+      break;
+    case 'ready':
+      description = t('desktop.updateRestarting');
+      break;
+    case 'error':
+      description = t('desktop.updateFailed', { error: status.message });
+      break;
+    default:
+      description = t('desktop.updateIdle');
+  }
+  const busy = status.kind === 'checking' || status.kind === 'downloading' || status.kind === 'ready';
+
+  return (
+    <>
+      <Row label={t('desktop.updates')} description={description}>
+        {status.kind === 'available' ? (
+          <Button size="sm" onClick={() => void installUpdate()}>
+            <Download />
+            {t('desktop.updateInstall')}
+          </Button>
+        ) : (
+          <Button size="sm" variant="outline" disabled={busy} onClick={() => void checkForUpdates()}>
+            {busy ? <Loader2 className="animate-spin" /> : <RefreshCw />}
+            {t('desktop.updateCheck')}
+          </Button>
+        )}
+      </Row>
+      <SwitchRow
+        label={t('desktop.autoUpdateCheck')}
+        description={t('desktop.autoUpdateCheckDescription')}
+        checked={autoCheck}
+        onCheckedChange={(value) => set({ autoUpdateCheck: value })}
+      />
+    </>
   );
 }
 

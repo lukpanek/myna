@@ -8,14 +8,19 @@
     "core:window:allow-set-badge-count",
     "core:window:allow-set-badge-label",
     "core:window:allow-set-focus",
+    "core:window:allow-close",
     "core:window:allow-show",
     "core:window:allow-unminimize",
     "core:window:allow-is-focused",
     "core:window:allow-start-dragging",
     "autostart:default",
+    "global-shortcut:allow-register",
+    "global-shortcut:allow-unregister",
     "notification:default",
     "opener:default",
     "os:default",
+    "process:allow-restart",
+    "updater:default",
     "window-state:default"
   ]
 }

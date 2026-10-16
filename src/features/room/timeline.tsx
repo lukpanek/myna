@@ -17,7 +17,9 @@ import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } fr
 import { toast } from 'sonner';
 import { t } from '@/i18n';
 import { scrollBehavior } from '@/lib/motion';
+import { usePopoutScope, viewOf } from '@/features/popout/popout-scope';
 import { isWindowFocused } from '@/lib/native';
+import { isPopoutFocused } from '@/lib/popout';
 import { configureScrollbar } from '@/lib/scrollbars';
 import { formatDayDivider } from '@/lib/time';
 import { useEmitterEvent, useMatrixClient } from '@/matrix/context';
@@ -112,6 +114,7 @@ function rowById(container: HTMLElement, id: string): HTMLElement | null {
 
 export function Timeline({ room }: { room: Room }) {
   const client = useMatrixClient();
+  const popout = usePopoutScope();
   const me = client.getSafeUserId();
   const showSystem = useSettings((s) => s.showSystemEvents);
   const showReceipts = useSettings((s) => s.showReadReceipts);
@@ -237,24 +240,26 @@ export function Timeline({ room }: { room: Room }) {
     if (state.timer) return;
     const run = () => {
       state.timer = null;
-      if (!stuckRef.current || !liveEndRef.current || document.hidden || !isWindowFocused()) return;
+      const focused = popout ? isPopoutFocused(room.roomId) : !document.hidden && isWindowFocused();
+      if (!stuckRef.current || !liveEndRef.current || !focused) return;
       state.last = Date.now();
       void markRoomRead(client, room).catch(() => undefined);
     };
     const wait = RECEIPT_THROTTLE - (Date.now() - state.last);
     if (wait <= 0) run();
     else state.timer = setTimeout(run, wait);
-  }, [client, room]);
+  }, [client, room, popout]);
 
   useEffect(() => {
     const onFocus = () => sendReceipt();
-    window.addEventListener('focus', onFocus);
-    document.addEventListener('visibilitychange', onFocus);
+    const win = popout?.win ?? window;
+    win.addEventListener('focus', onFocus);
+    win.document.addEventListener('visibilitychange', onFocus);
     return () => {
-      window.removeEventListener('focus', onFocus);
-      document.removeEventListener('visibilitychange', onFocus);
+      win.removeEventListener('focus', onFocus);
+      win.document.removeEventListener('visibilitychange', onFocus);
     };
-  }, [sendReceipt]);
+  }, [sendReceipt, popout]);
 
   // --- pagination ----------------------------------------------------------
 
@@ -350,8 +355,9 @@ export function Timeline({ room }: { room: Room }) {
 
   useEffect(() => {
     // Fill the viewport and keep receipts/banner current after content changes.
-    const frame = requestAnimationFrame(checkEdges);
-    return () => cancelAnimationFrame(frame);
+    const view = viewOf(scrollRef.current);
+    const frame = view.requestAnimationFrame(checkEdges);
+    return () => view.cancelAnimationFrame(frame);
   }, [sections, checkEdges]);
 
   // --- SDK subscriptions ---------------------------------------------------

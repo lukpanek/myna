@@ -37,15 +37,28 @@ cat > "$app/Contents/Info.plist" <<PLIST
 </dict>
 </plist>
 PLIST
+# SHA-1 of the profile's signing certificate when it is in the keychain. A profile
+# only accepts its own certificate; anything else gets the app killed at launch
+# by AMFI ("No matching profile found"), so the profile picks the identity.
+profile_identity() {
+  sha1="$(security cms -D -i "$1" 2>/dev/null | plutil -extract DeveloperCertificates.0 raw -o - - 2>/dev/null |
+    base64 -d | openssl x509 -inform der -noout -fingerprint -sha1 2>/dev/null | sed 's/.*=//; s/://g')"
+  [ -n "$sha1" ] && security find-identity -v -p codesigning | grep -q "$sha1" && echo "$sha1"
+}
 profile="${MYNA_DEV_PROVISIONING_PROFILE:-$root/profiles/myna-dev.provisionprofile}"
 entitlements=""
-if [ -f "$profile" ] && [ -n "$APPLE_SIGNING_IDENTITY" ]; then
+identity="${APPLE_SIGNING_IDENTITY:--}"
+[ -f "$profile" ] && profile_cert="$(profile_identity "$profile")"
+if [ -n "$profile_cert" ]; then
+  identity="$profile_cert"
   cp "$profile" "$app/Contents/embedded.provisionprofile"
   entitlements="$(dirname "$bin")/myna-dev.entitlements"
   security cms -D -i "$profile" | plutil -extract Entitlements xml1 -o "$entitlements" -
 else
   rm -f "$app/Contents/embedded.provisionprofile"
 fi
-codesign --force --sign "${APPLE_SIGNING_IDENTITY:--}" ${entitlements:+--entitlements "$entitlements"} "$app" 2>/dev/null ||
+[ -f "$profile" ] && [ -z "$profile_cert" ] &&
+  echo "dev-runner: certificate of $profile not in the keychain, signing without it (no communication notifications)" >&2
+codesign --force --sign "$identity" ${entitlements:+--entitlements "$entitlements"} "$app" 2>/dev/null ||
   echo "dev-runner: codesign failed, notifications will not work" >&2
 exec "$app/Contents/MacOS/myna" "$@"

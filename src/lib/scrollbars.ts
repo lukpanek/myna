@@ -51,20 +51,25 @@ function canScrollY(el: Element): boolean {
   return cached && el.scrollHeight > el.clientHeight + 1;
 }
 
+/** Element check that also holds for a chat pop-out's nodes (another window's realm, so no `instanceof`). */
+function isElement(target: EventTarget | null): target is HTMLElement {
+  return !!target && (target as Node).nodeType === Node.ELEMENT_NODE;
+}
+
 function scrollerFor(target: EventTarget | null): HTMLElement | null {
-  for (let el = target instanceof Element ? target : null; el && el !== document.body; el = el.parentElement) {
-    if (el instanceof HTMLElement && canScrollY(el)) return el;
+  for (let el = isElement(target) ? target : null; el && el !== el.ownerDocument.body; el = el.parentElement) {
+    if (canScrollY(el)) return el;
   }
   return null;
 }
 
 /** `html { zoom }` scales both client rects and the thumb's own lengths; undo it once. */
-function zoom(): number {
-  return Number.parseFloat(getComputedStyle(document.documentElement).zoom) || 1;
+function zoom(doc: Document): number {
+  return Number.parseFloat(getComputedStyle(doc.documentElement).zoom) || 1;
 }
 
 function geometry(el: HTMLElement) {
-  const z = zoom();
+  const z = zoom(el.ownerDocument);
   const rect = el.getBoundingClientRect();
   const track = el.clientHeight - INSET * 2;
   const height = options.get(el)?.fixedThumb
@@ -88,14 +93,16 @@ function scrollToFraction(el: HTMLElement, fraction: number) {
   el.scrollTop = reversed.get(el) ? pos - max : pos;
 }
 
-export function installScrollbarActivity(): void {
-  const thumb = document.createElement('div');
+/** Installs the overlay scrollbar in `doc`: the main window at startup, each chat pop-out when it opens. */
+export function installScrollbarActivity(doc: Document = document): void {
+  const view = doc.defaultView ?? window;
+  const thumb = doc.createElement('div');
   thumb.className = 'overlay-scrollbar';
   thumb.setAttribute('aria-hidden', 'true');
-  const label = document.createElement('div');
+  const label = doc.createElement('div');
   label.className = 'overlay-scrollbar-label';
   label.setAttribute('aria-hidden', 'true');
-  document.body.append(thumb, label);
+  doc.body.append(thumb, label);
 
   let current: HTMLElement | null = null;
   let hovered: HTMLElement | null = null;
@@ -113,7 +120,7 @@ export function installScrollbarActivity(): void {
   let lastOffset = 0;
   let correction = 0;
   let correctionAt = 0;
-  const resize = new ResizeObserver(() => schedule());
+  const resize = new (view as typeof globalThis).ResizeObserver(() => schedule());
 
   const place = () => {
     frame = 0;
@@ -172,7 +179,7 @@ export function installScrollbarActivity(): void {
   };
 
   const schedule = () => {
-    if (!frame) frame = requestAnimationFrame(place);
+    if (!frame) frame = view.requestAnimationFrame(place);
   };
 
   const show = (el: HTMLElement) => {
@@ -197,11 +204,11 @@ export function installScrollbarActivity(): void {
     }, IDLE_MS);
   };
 
-  document.addEventListener(
+  doc.addEventListener(
     'scroll',
     (e) => {
       const el = e.target;
-      if (!(el instanceof HTMLElement) || !canScrollY(el)) return;
+      if (!isElement(el) || !canScrollY(el)) return;
       scrolling = true;
       clearTimeout(scrollTimer);
       scrollTimer = setTimeout(() => {
@@ -214,7 +221,7 @@ export function installScrollbarActivity(): void {
     { capture: true, passive: true },
   );
 
-  document.addEventListener(
+  doc.addEventListener(
     'pointermove',
     (e) => {
       if (dragging || e.target === thumb) return;
@@ -230,12 +237,12 @@ export function installScrollbarActivity(): void {
     { passive: true },
   );
 
-  document.documentElement.addEventListener('pointerleave', () => {
+  doc.documentElement.addEventListener('pointerleave', () => {
     hovered = null;
     hideLater();
   });
 
-  window.addEventListener('resize', schedule, { passive: true });
+  view.addEventListener('resize', schedule, { passive: true });
 
   thumb.addEventListener('pointerenter', () => {
     thumbHovered = true;

@@ -13,6 +13,7 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 import { type KeyboardEvent, useEffect, useMemo, useRef, useState } from 'react';
+import { viewOf } from '@/features/popout/popout-scope';
 import { t } from '@/i18n';
 import { cn } from '@/lib/utils';
 import { useSettings } from '@/store/settings';
@@ -195,7 +196,7 @@ export function EmojiPicker({ onPick, className }: { onPick: (emoji: string) => 
 
   const jumpTo = (key: number) => {
     setQuery('');
-    requestAnimationFrame(() => {
+    viewOf(scrollRef.current).requestAnimationFrame(() => {
       const el = scrollRef.current;
       const header = el?.querySelector<HTMLElement>(`[data-section="${key}"]`);
       if (el && header) el.scrollTo({ top: header.offsetTop });

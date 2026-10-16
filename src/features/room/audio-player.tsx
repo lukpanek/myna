@@ -1,5 +1,6 @@
 import { Loader2, Pause, Play } from 'lucide-react';
 import { type PointerEvent, useEffect, useMemo, useRef, useState } from 'react';
+import { viewOf } from '@/features/popout/popout-scope';
 import { getLocale, t } from '@/i18n';
 import { formatDuration } from '@/lib/time';
 import { cn } from '@/lib/utils';
@@ -67,13 +68,14 @@ export function AudioPlayer({ url, file, mimetype, durationMs, waveform, name }:
   useEffect(() => {
     if (!playing) return;
     let frame = 0;
+    const view = viewOf(audioRef.current);
     const tick = () => {
       const audio = audioRef.current;
       if (audio) setCurrent(audio.currentTime);
-      frame = requestAnimationFrame(tick);
+      frame = view.requestAnimationFrame(tick);
     };
-    frame = requestAnimationFrame(tick);
-    return () => cancelAnimationFrame(frame);
+    frame = view.requestAnimationFrame(tick);
+    return () => view.cancelAnimationFrame(frame);
   }, [playing]);
 
   useEffect(

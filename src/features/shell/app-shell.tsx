@@ -10,6 +10,7 @@ import { attachReminders, remindersByRoom, useReminders } from '@/features/later
 import { attachScheduledSender } from '@/features/later/scheduled';
 import { NewChatDialog } from '@/features/new-chat/new-chat-dialog';
 import { useDesktopNotifications } from '@/features/notifications/use-notifications';
+import { PopoutHost } from '@/features/popout/popout-host';
 import { RoomView } from '@/features/room/room-view';
 import { SettingsDialog } from '@/features/settings/settings-dialog';
 import { ShortcutsDialog } from '@/features/settings/shortcuts-dialog';
@@ -17,10 +18,12 @@ import { t } from '@/i18n';
 import { useNativeIntegration } from '@/lib/native';
 import { isMac, modKey } from '@/lib/platform';
 import { attachBackfillReader } from '@/matrix/backfill';
+import { attachConnection } from '@/matrix/connection';
 import { useMatrixClient } from '@/matrix/context';
 import { attachRoomsStore, useRooms } from '@/matrix/rooms-store';
 import { useSettings } from '@/store/settings';
 import { openSearch, useUi } from '@/store/ui';
+import { ConnectionBanner } from './connection-banner';
 import { QuickSwitcher } from './quick-switcher';
 import { Rail } from './rail';
 import { RightPanel } from './right-panel';
@@ -39,6 +42,7 @@ export function AppShell({ onLogout }: { onLogout: () => void }) {
   useEffect(() => attachReminders(client), [client]);
   useEffect(() => attachScheduledSender(client), [client]);
   useEffect(() => attachActivity(client), [client]);
+  useEffect(() => attachConnection(client), [client]);
   useNativeIntegration();
   useDesktopNotifications();
   useGlobalShortcuts();
@@ -60,6 +64,7 @@ export function AppShell({ onLogout }: { onLogout: () => void }) {
           <kbd className="ml-auto font-sans text-[11px] opacity-70">{modKey}K</kbd>
         </button>
       </header>
+      <ConnectionBanner />
       <div className="flex min-h-0 flex-1">
         <Rail onLogout={onLogout} />
         <div className="flex min-w-0 flex-1 overflow-hidden rounded-tl-lg border-t border-l bg-background">
@@ -83,6 +88,7 @@ export function AppShell({ onLogout }: { onLogout: () => void }) {
       <ShortcutsDialog />
       <CryptoPrompts />
       <ReminderDialog />
+      <PopoutHost />
     </div>
   );
 }

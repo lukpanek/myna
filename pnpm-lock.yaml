@@ -26,6 +26,9 @@ importers:
       '@tauri-apps/plugin-autostart':
         specifier: ^2.7.0
         version: 2.7.0
+      '@tauri-apps/plugin-global-shortcut':
+        specifier: ^2.4.1
+        version: 2.4.1
       '@tauri-apps/plugin-notification':
         specifier: ^2.6.0
         version: 2.6.0
@@ -35,6 +38,12 @@ importers:
       '@tauri-apps/plugin-os':
         specifier: ^2.4.0
         version: 2.4.0
+      '@tauri-apps/plugin-process':
+        specifier: ^2.4.0
+        version: 2.4.0
+      '@tauri-apps/plugin-updater':
+        specifier: ^2.14.0
+        version: 2.14.0
       '@tauri-apps/plugin-window-state':
         specifier: ^2.5.0
         version: 2.5.0
@@ -1177,6 +1186,9 @@ packages:
   '@tauri-apps/plugin-autostart@2.7.0':
     resolution: {integrity: sha512-4uRq+rqKSAh6MWAxgk6FnUPigc8VMG8eDVYTLk3A7OfKs9sLVwfeM8kbUvzjpabRQvyl4zd9tfzXBTrrtuprsA==}
 
+  '@tauri-apps/plugin-global-shortcut@2.4.1':
+    resolution: {integrity: sha512-NVCoQ0ShDFncsj9f8iAzhRBTnsJj5sf60vOjcV6emeQHzmEFd6+RXH+fUHHuJAbEYP4mdT2vGlvVOG7tMr/e8g==}
+
   '@tauri-apps/plugin-notification@2.6.0':
     resolution: {integrity: sha512-QvpsQ6L6uSGT/7AmIrEUrfOiqjP1S8HtBU1ieaX6bvOFXGjnoxbNMR9V+8PVhLqRdOntqevpUJ3c52S+1afsIw==}
 
@@ -1185,6 +1197,12 @@ packages:
 
   '@tauri-apps/plugin-os@2.4.0':
     resolution: {integrity: sha512-XFQjntNNI3Vlqdy4WUGwiXX8DByzKVvoemAcUVkBm9NJPGmoDtII5i+vfuAzWaJfOE5cUJJLUDqXBnd4reSAIA==}
+
+  '@tauri-apps/plugin-process@2.4.0':
+    resolution: {integrity: sha512-GddrmsSLAYrLa/yTXlXK/YRDzUgYeeOnUXTbiyvJWkmI424RmDPD3FVLeqcon7rv6O6ZfhBilcrHWnSo7o6hIQ==}
+
+  '@tauri-apps/plugin-updater@2.14.0':
+    resolution: {integrity: sha512-gdylJ9tger4hkyOn24QZd6MNOKVo2Eh53iw5th2Qj1vKTR/+u4PIwJWuiis5hohYvobn6iOvlnALfrqIPSzh7Q==}
 
   '@tauri-apps/plugin-window-state@2.5.0':
     resolution: {integrity: sha512-ySI/32fpC1ZTslIZ00/wf9HujyDnkG3OPL16uuLjG53y1hTgjIJ9G2VPuOL1IV8GVr3xeF6lnr6h2T73HuGXow==}
@@ -3050,6 +3068,10 @@ snapshots:
     dependencies:
       '@tauri-apps/api': 2.12.3
 
+  '@tauri-apps/plugin-global-shortcut@2.4.1':
+    dependencies:
+      '@tauri-apps/api': 2.12.3
+
   '@tauri-apps/plugin-notification@2.6.0':
     dependencies:
       '@tauri-apps/api': 2.12.3
@@ -3059,6 +3081,14 @@ snapshots:
       '@tauri-apps/api': 2.12.3
 
   '@tauri-apps/plugin-os@2.4.0':
+    dependencies:
+      '@tauri-apps/api': 2.12.3
+
+  '@tauri-apps/plugin-process@2.4.0':
+    dependencies:
+      '@tauri-apps/api': 2.12.3
+
+  '@tauri-apps/plugin-updater@2.14.0':
     dependencies:
       '@tauri-apps/api': 2.12.3
 

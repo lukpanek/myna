@@ -1,6 +1,6 @@
 import { KnownMembership, type MatrixEvent, type Room, type RoomMember, RoomEvent, RoomMemberEvent, RoomStateEvent } from 'matrix-js-sdk';
-import { Bell, BellOff, BellRing, Info, Loader2, Search, Upload } from 'lucide-react';
-import { type DragEvent, useState } from 'react';
+import { Bell, BellOff, BellRing, Info, Loader2, Search, SquareArrowOutUpRight, Upload } from 'lucide-react';
+import { type DragEvent, type MouseEvent, useState } from 'react';
 import { toast } from 'sonner';
 import { MxAvatar } from '@/components/mx-avatar';
 import { Button } from '@/components/ui/button';
@@ -15,8 +15,10 @@ import {
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { Composer } from '@/features/composer/composer';
 import { composerKey, useComposerStore } from '@/features/composer/composer-store';
+import { usePopoutScope } from '@/features/popout/popout-scope';
 import { t } from '@/i18n';
-import { modKey } from '@/lib/platform';
+import { isMac, modKey } from '@/lib/platform';
+import { openPopout, popoutTitleBarMouseDown } from '@/lib/popout';
 import { cn } from '@/lib/utils';
 import { useEmitterEvent, useMatrixClient } from '@/matrix/context';
 import { useRerenderOn, useRoom, useRoomSummary } from '@/matrix/hooks';
@@ -127,6 +129,13 @@ function RoomHeader({ room, summary }: { room: Room; summary: RoomSummary | unde
   const networks = useRooms((s) => s.networks);
   const rightPanel = useUi((s) => s.rightPanel);
   const setRightPanel = useUi((s) => s.setRightPanel);
+  const inPopout = !!usePopoutScope();
+  const onTitleBarMouseDown = (e: MouseEvent) => {
+    // Only the bare header and its text drag the window, not its buttons.
+    if (inPopout && !(e.target as Element).closest('button, a, input, [role="button"]')) {
+      popoutTitleBarMouseDown(e);
+    }
+  };
   useRerenderOn(room, RoomEvent.Name);
 
   const name = summary?.name ?? room.name;
@@ -140,8 +149,9 @@ function RoomHeader({ room, summary }: { room: Room; summary: RoomSummary | unde
   const memberCount = room.getJoinedMemberCount();
   const level = summary?.notifyLevel ?? 'default';
   const NotifyIcon = NOTIFY_ICONS[level];
-  const detailsOpen = rightPanel?.kind === 'details';
-  const searchOpen = rightPanel?.kind === 'search';
+  // In a pop-out the right panel is the main window's; its toggles open things there instead.
+  const detailsOpen = !inPopout && rightPanel?.kind === 'details';
+  const searchOpen = !inPopout && rightPanel?.kind === 'search';
 
   const subtitle = [
     bridge ? (account ? `${bridge.networkName} · ${account.name}` : bridge.networkName) : null,
@@ -157,8 +167,14 @@ function RoomHeader({ room, summary }: { room: Room; summary: RoomSummary | unde
 
   return (
     <header
-      data-tauri-drag-region
-      className="flex h-14 shrink-0 items-center gap-3 border-b px-5 [--avatar-ring:var(--background)]"
+      // Tauri's drag script runs in pop-outs too but always moves the main window.
+      data-tauri-drag-region={inPopout ? undefined : true}
+      onMouseDown={onTitleBarMouseDown}
+      className={cn(
+        'flex h-14 shrink-0 items-center gap-3 border-b px-5 [--avatar-ring:var(--background)]',
+        // Pop-out on macOS: the traffic lights get their own strip above the chat name.
+        inPopout && isMac && 'h-auto pt-9 pb-2.5',
+      )}
     >
       <MxAvatar
         mxc={summary?.avatarMxc ?? room.getMxcAvatarUrl()}
@@ -223,6 +239,21 @@ function RoomHeader({ room, summary }: { room: Room; summary: RoomSummary | unde
             </DropdownMenuRadioGroup>
           </DropdownMenuContent>
         </DropdownMenu>
+        {!inPopout && (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon-sm"
+                aria-label={t('desktop.openInWindow')}
+                onClick={() => openPopout(room.roomId, name)}
+              >
+                <SquareArrowOutUpRight />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>{t('desktop.openInWindow')}</TooltipContent>
+          </Tooltip>
+        )}
         <Tooltip>
           <TooltipTrigger asChild>
             <Button

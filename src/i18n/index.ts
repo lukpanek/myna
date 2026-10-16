@@ -9,6 +9,7 @@ import bridges from './messages/bridges';
 import common from './messages/common';
 import composer from './messages/composer';
 import crypto from './messages/crypto';
+import desktop from './messages/desktop';
 import details from './messages/details';
 import emoji from './messages/emoji';
 import later from './messages/later';
@@ -39,6 +40,7 @@ const catalogs = {
   emoji,
   crypto,
   details,
+  desktop,
   bridges,
   newChat,
   later,
